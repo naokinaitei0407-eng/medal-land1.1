@@ -1485,15 +1485,42 @@ function p2pJoin(name){
     connected:()=>!!(hub||(hubConn&&hubConn.open)),
     leave(){alive=false;try{send({t:'bye'})}catch(e){}setTimeout(()=>{try{peer&&peer.destroy()}catch(e){}},200);return Promise.resolve()}};
 }
+// ===== Supabase Realtime 部屋（サーバー中継で確実につながる） =====
+const SB_URL='',SB_KEY='';
+function loadSupa(){if(window.supabase&&window.supabase.createClient)return Promise.resolve();return new Promise((ok,ng)=>{const srcs=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','https://unpkg.com/@supabase/supabase-js@2'];let i=0;const nx=()=>{if(i>=srcs.length)return ng(new Error('supa'));const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.supabase&&window.supabase.createClient?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
+function supaRoomNs(){return {join:async name=>{await loadSupa();return supaJoin(name)}}}
+function supaJoin(name){
+  const myId=Math.random().toString(36).slice(2,10),cl=window.supabase.createClient(SB_URL,SB_KEY,{realtime:{params:{eventsPerSecond:20}}});
+  const ch=cl.channel('mland-'+name,{config:{broadcast:{self:false},presence:{key:myId}}});
+  const L={},PF=[];let peers={},myPres={},sub=false,presT=null,presLast=0;window.p2pSt='サーバーに接続中…';
+  const snap=()=>Object.values(peers).concat([{peer:myId,isMe:true,sameTab:true,kind:'viewer',guest:false,presence:Object.freeze({...myPres}),updatedAt:Date.now()}]);
+  const fire=(j=[],l=[],u=[])=>{const p=snap();PF.forEach(f=>{try{f({peers:p,joined:j,left:l,updated:u})}catch(e){}})};
+  ch.on('broadcast',{event:'m'},({payload:m})=>{if(!m||m.pid===myId)return;(L[m.topic]||[]).forEach(f=>{try{f({topic:m.topic,data:m.data,peer:m.pid,isMe:false,sameTab:false,kind:'viewer',guest:false})}catch(e){}})});
+  ch.on('presence',{event:'sync'},()=>{const st=ch.presenceState(),np={},j=[],l=[],u=[];
+    for(const k in st){if(k===myId)continue;const a=st[k]&&st[k][st[k].length-1];if(!a)continue;const pr=a.p||{};const o={peer:k,isMe:false,sameTab:false,kind:'viewer',guest:false,presence:Object.freeze(pr),updatedAt:Date.now()};np[k]=o;(peers[k]?u:j).push(o)}
+    for(const k in peers)if(!np[k])l.push(peers[k]);peers=np;fire(j,l,u)});
+  const pushPres=()=>{presT=null;presLast=Date.now();if(sub)ch.track({p:myPres}).catch(()=>{})};
+  const sched=()=>{if(presT)return;const w=Math.max(0,450-(Date.now()-presLast));presT=setTimeout(pushPres,w)};
+  ch.subscribe(st=>{if(st==='SUBSCRIBED'){sub=true;window.p2pSt=p2pRole==='host'?'部屋の準備OK　友達を待っています':'ホストと接続しました';pushPres()}
+    else if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'){window.p2pSt='サーバーにつながりません。電波を確認してください'}});
+  let lastPos=0;
+  return {name,
+    emit(t,d){if(!sub)return Promise.resolve();if(t==='pos'){const n=Date.now();if(n-lastPos<190)return Promise.resolve();lastPos=n}return ch.send({type:'broadcast',event:'m',payload:{pid:myId,topic:t,data:d}}).then(()=>{},()=>{})},
+    on(t,f){(L[t]=L[t]||[]).push(f);return()=>{L[t]=(L[t]||[]).filter(x=>x!==f)}},
+    presence(p){for(const k in p){if(p[k]===null)delete myPres[k];else myPres[k]=p[k]}sched();return Promise.resolve()},
+    peers:snap,onPeers(f){PF.push(f);setTimeout(()=>fire(),0);return()=>{const i=PF.indexOf(f);if(i>=0)PF.splice(i,1)}},
+    connected:()=>sub,
+    leave(){try{ch.untrack();cl.removeChannel(ch)}catch(e){}return Promise.resolve()}};
+}
 // ================= ネットワーク =================
 async function initNet(){
   try{
     const [rm,us,dbn]=await Promise.all([window.claude&&claude.use?claude.use('room'):null,window.claude&&claude.use?claude.use('user'):null,window.claude&&claude.use?claude.use('db').catch(()=>null):null]);
     room=rm;userNs=us;dbNs=dbn;try{myUid=us?await us.id():null}catch(e){myUid=null}rankSchedule();
     canHost=!!(us&&await us.canEdit());
-    if(!room){room=p2pRoomNs();canHost=true}
+    if(!room){room=SB_URL&&SB_KEY?supaRoomNs():p2pRoomNs();canHost=true}
     online=!!room;
-  }catch(e){room=p2pRoomNs();canHost=true;online=true}
+  }catch(e){room=SB_URL&&SB_KEY?supaRoomNs():p2pRoomNs();canHost=true;online=true}
   if(phase==='title')renderTitle();
 }
 function inRoom(){return nroom&&role!=='solo'}
