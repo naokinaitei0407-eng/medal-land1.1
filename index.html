@@ -1152,6 +1152,27 @@ body.lobbyon .link{color:#8a97b3}body.lobbyon .loading{color:#c8d0e2}
 .lb-net{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:12px;font-weight:800;color:#c8d0e2}
 .lb-net i{width:9px;height:9px;border-radius:50%;background:#ffb300;box-shadow:0 0 8px #ffb300;animation:pulse .6s infinite alternate}.lb-net i.ok{background:#5be08a;box-shadow:0 0 8px #5be08a;animation:none}.lb-net i.ng{background:#ff5252;box-shadow:0 0 8px #ff5252}
 .lb-ver{font-size:10px;color:#56627d;margin-top:4px}
+.frm{position:absolute;left:3px;bottom:3px;display:flex;gap:1px;pointer-events:none}.frm i{width:14px;height:14px;border-radius:50%;font-style:normal;font-size:8px;font-weight:900;color:#1a1a1a;display:flex;align-items:center;justify-content:center;border:1px solid #fff;box-shadow:0 1px 2px rgba(0,0,0,.4)}
+.cell{position:relative}
+.frbets{margin:8px 0;padding:8px 10px;border-radius:14px;background:rgba(12,16,30,.85);border:1px solid rgba(255,255,255,.12);color:#fff}
+.frb-t{font-size:12px;font-weight:900;color:#ffd54a;margin-bottom:4px}
+.frb-r{display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-top:1px solid rgba(255,255,255,.08)}.frb-r:first-of-type{border-top:none}
+.frb-av{width:26px;height:26px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;color:#1a1a1a}
+.frb-b{flex:1;min-width:0}.frb-b b{font-size:13px}.frb-b small{margin-left:6px;font-size:10px;color:#9aa6c2;font-weight:800}
+.frb-ks{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}.frb-k{display:inline-flex;align-items:center;gap:3px;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,.1);font-size:11px}.frb-k em{font-style:normal;font-weight:900;color:#ffd54a;margin-left:2px}
+.frb-k.hot{background:rgba(255,213,74,.35);box-shadow:0 0 8px #ffd54a}.frb-more{font-size:10px;color:#9aa6c2}
+.vs{margin:10px 0;padding:10px;border-radius:16px;background:linear-gradient(#18223a,#0d1426);color:#fff;border:1px solid rgba(255,213,74,.3)}
+.vs.fin{border:2px solid #ffd54a;box-shadow:0 0 24px rgba(255,213,74,.4)}
+.vs-t{display:flex;justify-content:space-between;align-items:center;font-family:'Dela Gothic One','Mochiy Pop One',sans-serif;font-size:17px;color:#ffd54a;margin-bottom:6px}.vs-t span{font-family:inherit;font-size:12px;color:#9aa6c2}
+.vs-win{text-align:center;margin:4px 0 10px}.vs-win small{display:block;font-size:11px;color:#9aa6c2;font-weight:900}.vs-win b{display:block;font-family:'Reggae One','Dela Gothic One',sans-serif;font-size:30px;color:#ffd54a;text-shadow:0 0 16px rgba(255,200,0,.6)}.vs-win em{font-style:normal;font-weight:900;color:#7dff9f}
+.vs-h,.vs-r{display:grid;grid-template-columns:22px 1fr 56px 56px 64px;gap:4px;align-items:center;font-size:12px}
+.vs-h{font-size:10px;color:#7f8aa6;font-weight:900;padding:0 2px 4px}.vs-h span:nth-child(n+3),.vs-r span:nth-child(n+3){text-align:right}
+.vs-r{padding:6px 4px;border-radius:10px;font-weight:900}.vs-r.me{background:rgba(255,213,74,.12)}
+.vs-rk{width:20px;height:20px;border-radius:50%;background:#2a3654;display:flex;align-items:center;justify-content:center;font-size:11px}.vs-rk.r1{background:#ffd54a;color:#3a2400}.vs-rk.r2{background:#cfd8dc;color:#333}.vs-rk.r3{background:#d7a36a;color:#3a2400}
+.vs-n{display:flex;align-items:center;gap:5px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.vs-n i{width:10px;height:10px;border-radius:50%;flex:none}
+.vs-r .pos{color:#5be08a}.vs-r .neg{color:#ff6b6b}
+.lb-ml{display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 12px;color:#c8d0e2;font-size:12px;font-weight:900}.lb-ml button{padding:6px 12px;border-radius:10px;background:#18223a;color:#c8d0e2;font-weight:900;border:1px solid rgba(255,255,255,.12)}.lb-ml button.on{background:#ffd54a;color:#3a2400}.lb-ml b{color:#ffd54a}
+.frbets .frb-k{padding:2px 6px;font-size:11px;gap:3px}.frbets .mbr+.mbr{border-top:none}
 </style>
 </head>
 <body>
@@ -1449,7 +1470,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24b';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24c';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1528,8 +1549,8 @@ function emit(topic,data){if(inRoom())nroom.emit(topic,data).catch(()=>{})}
 function myPresence(extra){
   if(!inRoom())return;
   const p={nick:me.nick,med:me.medals,debt:me.debt||0,tw:me.totalWon||0,rn:race?race.rn:0,bets:myBets,car:myCarrot&&myCarrot.n?myCarrot:null,gift:giftOut?{id:giftOut.id,to:giftOut.to,amt:giftOut.amt}:null,ack:giftAcks.slice(-8)};
-  p.ready=lobbyReady?1:0;
-  if(role==='host')Object.assign(p,{host:1,ph:phase,rem:Math.max(0,Math.ceil(remain)),code});
+  p.ready=lobbyReady?1:0;if(mBase!=null)p.sg=worth()-mBase;
+  if(role==='host')Object.assign(p,{ml:matchLen,m0:matchStart,host:1,ph:phase,rem:Math.max(0,Math.ceil(remain)),code});
   if(extra)Object.assign(p,extra);
   nroom.presence(p).catch(()=>{});
 }
@@ -1654,7 +1675,7 @@ async function startHost(){
   if(!readNick())return;
   code=String(1000+Math.floor(Math.random()*9000));p2pRole='host';
   try{await joinRoom(code)}catch(e){toast('部屋をつくれませんでした');return}
-  role='host';loadWorld();phase='lobby';lobbyReady=true;myPresence();renderLobby();
+  sesBase=worth();matchStart=0;role='host';loadWorld();phase='lobby';lobbyReady=true;myPresence();renderLobby();
 }
 function hostLobbyStart(){if(role!=='host'||phase!=='lobby')return;const o=others();if(!o.length){toast('友達が入るのを待ってね');return}if(o.some(p=>!p.presence.ready)){toast('まだ準備OKでない人がいます');return}SFX&&SFX.coin&&SFX.coin(0);hostStartBet()}
 async function startClient(){
@@ -1663,7 +1684,7 @@ async function startClient(){
   if(c.length!==4){toast('4ケタの部屋番号を入れてね');return}
   p2pRole='client';
   try{await joinRoom(c)}catch(e){toast('部屋に入れませんでした');return}
-  code=c;role='client';card=null;race=null;settledRn=0;phase='wait';hostInfo=null;lobbyReady=false;
+  sesBase=worth();code=c;role='client';card=null;race=null;settledRn=0;phase='wait';hostInfo=null;lobbyReady=false;
   myPresence();renderWait();
   setTimeout(()=>{if(role==='client'&&!card&&phase==='wait')renderWait(true)},6000);
 }
@@ -1682,6 +1703,7 @@ function renderLobby(){document.body.classList.remove('home');document.body.clas
   const o=others(),allOk=o.length&&o.every(p=>p.presence.ready);
   app.innerHTML=`<div class="lobby"><div class="lb-cap">待機場</div><div class="lb-code"><small>部屋番号</small><b>${esc(code)}</b><span>友達にこの番号を伝えてね</span></div>
    ${lobbyListHTML()}
+   <div class="lb-ml"><span>対戦レース数</span>${[3,5,10].map(n=>`<button class="${matchLen===n?'on':''}" onclick="matchLen=${n};myPresence();renderLobby()">${n}R</button>`).join('')}</div>
    <button class="hbtn gold lb-go ${allOk?'':'off'}" onclick="hostLobbyStart()">${!o.length?'友達を待っています…':allOk?'みんな揃った！スタート':'全員の準備OKを待っています'}</button>
    ${lobbyStatusHTML()}<button class="link" onclick="exitGame()">部屋を閉じてタイトルへ</button></div>`}
 function renderWait(long){
@@ -1689,7 +1711,7 @@ function renderWait(long){
   const inLobby=hostInfo&&hostInfo.ph==='lobby';
   if(inLobby||(!hostInfo&&!long)){
     app.innerHTML=`<div class="lobby"><div class="lb-cap">待機場</div><div class="lb-code"><small>部屋番号</small><b>${esc(code)}</b><span>${hostInfo?'ホストがスタートするのを待っています':'ホストに接続中…'}</span></div>
-     ${hostInfo?lobbyListHTML():'<div class="loading" style="padding-top:20px"><div class="icon"><span class="spin"></span></div></div>'}
+     ${hostInfo?`<div class="lb-ml"><span>対戦レース数</span><b>${+hostInfo.ml||5}レース</b></div>`:''}${hostInfo?lobbyListHTML():'<div class="loading" style="padding-top:20px"><div class="icon"><span class="spin"></span></div></div>'}
      ${hostInfo?`<button class="hbtn ${lobbyReady?'glass':'gold'} lb-go" onclick="toggleReady()">${lobbyReady?'準備OK（取り消す）':'準備OK！'}</button>`:''}
      ${lobbyStatusHTML()}<button class="link" onclick="exitGame()">タイトルにもどる</button></div>`;return}
   app.innerHTML=`<div class="loading"><div class="icon"><span class="spin"></span></div><div>部屋 ${esc(code)} に入りました</div><div style="font-size:14px;color:#666;margin-top:8px">ホストのレースを待っています…</div>
@@ -1709,13 +1731,13 @@ async function exitGame(){
 function clearTimers(){clearInterval(tickTimer);clearInterval(resultTimer);tickTimer=resultTimer=null}
 
 // ================= ホスト進行 =================
-function hostStartBet(){document.body.classList.remove('lobbyon');
+function hostStartBet(){document.body.classList.remove('lobbyon');if(role==='host'&&(!matchStart||lastMatch==='done')){lastMatch=null;matchStart=-1}
   clearTimers();document.body.classList.remove('home');
   app.innerHTML=`<div class="loading"><div class="icon"><span class="spin"></span></div><div>パドックに馬が入場中…</div></div>`;
   setTimeout(()=>{
     W.raceNo++;
     const r=makeRace();calcOdds(r);predict(r);
-    card=makeCard(r);race=cardToRace(card);eng={r};
+    card=makeCard(r);race=cardToRace(card);eng={r};if(matchStart===-1)matchStart=race.rn;
     beginBetLocal();
     remain=BET_TIME;myPresence();emit('card',card);
     let lastSec=BET_TIME,since=0;
@@ -1746,7 +1768,7 @@ function bgmStart(){bgmStop();const a=ac();if(!a)return;bgmNext=a.currentTime+0.
       bgmNext+=st*(hurry?0.82:1);bgmStep++}
   },60)}
 function bgmStop(){clearInterval(bgmTimer);bgmTimer=null}
-function beginBetLocal(){document.body.classList.remove('lobbyon');
+function beginBetLocal(){document.body.classList.remove('lobbyon');{const m0=role==='host'?matchStart:(hostInfo&&+hostInfo.m0);if(m0&&race&&race.rn===m0&&mBaseRn!==m0){mBase=worth();mBaseRn=m0}}
   myBets={};betHist=[];myCarrot=false;mode=0;phase='bet';setTimeout(bgmStart,50);
   let debtNew=false;
   if(me.medals<=0&&(me.bank||0)>0){const v=Math.min(me.bank,START_MEDALS);me.bank-=v;me.medals+=v;saveMe();setTimeout(()=>toast(`貯金から${v}枚引き出しました`),300)}
@@ -2072,7 +2094,7 @@ function renderBet(){
   ${rivalCardHTML()}
   ${predHTML()}
   <div class="modes"><button class="action" onclick="setMode((mode+1)%3)">ACTION</button><div class="mtabs" id="mtabs"></div></div>
-  <div class="board" id="board"></div></div>
+  <div class="board" id="board"></div><div id="frbox"></div></div>
   <div class="sec" style="color:#fff">過去のレース結果</div>
   ${historyHTML()}
   ${role!=='client'?`<button class="link" onclick="remain=Math.min(remain,0.1)">BETを締め切ってスタート ▶</button>`:''}
@@ -2143,6 +2165,18 @@ function showDebtNotice(first){
 }
 
 function crowdNow(k){const t=race.crowdT[k]||0;return Math.round(t*Math.min(1,(BET_TIME-remain)/15+0.1))}
+const FR_COL=['#ff6b6b','#4fc3f7','#ffd54a','#69f0ae','#ce93d8','#ffab40','#90caf9'];
+let mBase=null,mBaseRn=0,sesBase=null,matchLen=5,matchStart=0,lastMatch=null;
+function frList(){return others().map((p,i)=>({id:p.peer,n:String(p.presence.nick||'フレンド'),c:FR_COL[i%FR_COL.length],b:p.presence.rn===(race&&race.rn)&&p.presence.bets&&typeof p.presence.bets==='object'?p.presence.bets:{},med:+p.presence.med||0,debt:Math.max(0,+p.presence.debt||0),sg:+p.presence.sg||0,host:!!p.presence.host}))}
+function matchInfo(){const ml=role==='host'?matchLen:(hostInfo&&+hostInfo.ml)||5,m0=role==='host'?matchStart:(hostInfo&&+hostInfo.m0)||0;if(!race||!m0||m0<0)return null;return {ml,m0,no:race.rn-m0+1,last:race.rn-m0+1>=ml}}
+function frOnCell(k){return frList().filter(f=>(+f.b[k]||0)>0).map(f=>({c:f.c,a:f.n.slice(0,1),v:+f.b[k]}))}
+function frMarks(k){const L=frOnCell(k);return L.length?`<div class="frm">${L.slice(0,4).map(f=>`<i style="background:${f.c}" title="${esc(f.a)}">${esc(f.a)}</i>`).join('')}</div>`:''}
+function friendsBetHTML(compact){const F=frList();if(!F.length)return '';
+  return `<div class="frbets ${compact?'cp':''}"><div class="frb-t">フレンドの馬券</div>${F.map(f=>{const ks=Object.keys(f.b).filter(k=>(+f.b[k]||0)>0);const tot=ks.reduce((a,k)=>a+(+f.b[k]||0),0);
+    return `<div class="frb-r"><span class="frb-av" style="background:${f.c}">${esc(f.n.slice(0,1))}</span><div class="frb-b"><b>${esc(f.n)}</b><small>${tot?`計${tot}枚`:'まだBETしていません'}</small><div class="frb-ks">${ks.slice(0,6).map(k=>`<span class="frb-k mbr" data-k="${k}">${betLabel(k)}<em>${+f.b[k]}</em></span>`).join('')}${ks.length>6?`<span class="frb-more">他${ks.length-6}</span>`:''}</div></div></div>`}).join('')}</div>`}
+function updateFriendsBet(){const el=document.getElementById('frbox');if(el){const h=friendsBetHTML(phase!=='bet');if(el._h!==h){el._h=h;el.innerHTML=h}}
+  document.querySelectorAll('.cell[data-k]').forEach(c=>{const k=c.dataset.k;let m=c.querySelector('.frm');const h=frMarks(k);if(!h){if(m)m.remove();return}if(!m){c.insertAdjacentHTML('beforeend',h)}else if(m.outerHTML!==h)m.outerHTML=h})}
+setInterval(()=>{if(inRoom()&&(phase==='bet'||phase==='race'||phase==='closing'))updateFriendsBet()},600);
 function othersOn(k){let s=0;others().forEach(p=>{if(p.presence.rn===race.rn&&p.presence.bets)s+=(+p.presence.bets[k]||0)});return s}
 function tic(type){const t=TYPES[type];return `<span class="tic" style="background:${t.col}">${t.ic}</span>`}
 function strip(a,b,sep){
@@ -2440,7 +2474,7 @@ function renderRace(){document.body.classList.remove('betfit');
   app.innerHTML=`<button class="mini-menu" onclick="showMenu()"><i class="ic-menu"></i></button>
   <canvas id="cv"></canvas>
   <div class="cm2" id="cm">各馬ゲートインを待っています</div>
-  <div class="mbwrap">${myBetsHTML()}</div>
+  <div class="mbwrap">${myBetsHTML()}</div><div id="frbox"></div>
   <div class="rhl small"><div class="rhl-t">出走馬（タップで紹介）</div><div class="rhl-b">${r.horses.map(h=>`<button onclick="showHorse(${h.no})">${sb(h.no,'mb')}<span>${esc(h.name)}</span></button>`).join('')}</div></div>
   `;
   const cv=document.getElementById('cv');
@@ -2950,7 +2984,14 @@ function showResult(res){
   ${R0.zk&&R0.zk.nz.length?`<div class="zkn">図鑑に登録：${R0.zk.nz.join('、')}</div>`:''}
   ${R0.walBefore!=null?`<div class="walrow"><div class="wal" id="wal">${WALLET_SVG}<div><small>財布</small><b id="walv">${firstTime?R0.walBefore:me.medals}</b><i>枚</i></div></div>
     ${(R0.debtBefore||0)>0?`<div class="iou" id="iou"><div class="iou-p"><span>借用書</span><small>残り</small><b id="iouv">${firstTime?R0.debtBefore:me.debt}</b><i class="iou-st" id="iouSt"></i></div></div>`:''}</div>`:''}
-  ${role!=='solo'?`<div class="rs-pl">${playersList().sort((a,b)=>(b.med-b.debt)-(a.med-a.debt)).map((p,i)=>`<span>${i<3?`<i class="rk${i+1}">${i+1}</i>`:''}${esc(p.nick)} <b class="med">${p.me?me.medals:p.med}</b>${p.debt>0?'<small class="dbt">借金</small>':''}</span>`).join('')}</div>`:''}
+  ${role!=='solo'?(()=>{const mi=matchInfo(),spentMe=Object.values(myBets).reduce((x,y)=>x+(+y||0),0);
+    const L=[{n:me.nick,c:'#ffffff',me:1,pay:R0.pay||0,bet:spentMe,med:me.medals,debt:me.debt||0,g:mBase!=null?worth()-mBase:0}];
+    frList().forEach(f=>{let pay=0,bet=0;for(const k in f.b){const am=+f.b[k]||0;bet+=am;pay+=payoutOf(k,am,top)}L.push({n:f.n,c:f.c,pay,bet,med:f.med,debt:f.debt,g:f.sg})});
+    L.sort((a,b)=>b.g-a.g);const fin=mi&&mi.last;if(fin&&role==='host')lastMatch='done';
+    return `<div class="vs ${fin?'fin':''}"><div class="vs-t">${fin?'対戦終了':'フレンド対戦'}${mi?`<span>${Math.min(mi.no,mi.ml)} / ${mi.ml} レース</span>`:''}</div>
+     ${fin?`<div class="vs-win"><small>優勝</small><b>${esc(L[0].n)}</b>${L[0].me?'<em>あなたの勝ち！</em>':''}</div>`:''}
+     <div class="vs-h"><span></span><span>名前</span><span>今回</span><span>財布</span><span>対戦収支</span></div>
+     ${L.map((p,i)=>{const d=p.pay-p.bet;return `<div class="vs-r ${p.me?'me':''}"><span class="vs-rk ${i<3?'r'+(i+1):''}">${i+1}</span><span class="vs-n"><i style="background:${p.c}"></i>${esc(p.n)}</span><span class="${d>0?'pos':d<0?'neg':''}">${p.bet||p.pay?(d>0?'+':'')+d:'見'}</span><span class="med">${p.med}</span><span class="${p.g>0?'pos':p.g<0?'neg':''}">${p.g>0?'+':p.g<0?'△':''}${Math.abs(p.g)}</span></div>`}).join('')}</div>`})():''}
   ${role!=='client'?`<button class="big green nextbtn" onclick="if(resultTimer){clearInterval(resultTimer);resultTimer=null}hostStartBet()">次のレースへ ▶ <span id="nx">10</span><span class="bar" id="nxbar" style="width:100%"></span></button>`:`<div class="note" style="font-size:14px;color:#fff">まもなく次のレース…</div>`}`;
   {const rv=document.getElementById('rmxv');const box=document.querySelector('.rmx');if(box&&firstTime){const v=+rv?.dataset.v||0;if(rv)countUp('rmxv',v,900);
     const hot=box.classList.contains('hot');noise(0,0.08,0.4,'highpass',3000);tone(55,0,0.5,'sine',0.45);if(hot){[523,659,784,1046].forEach((f,i)=>brass(f,0.05+i*0.05,0.5,0.06));try{document.body.animate([{transform:'translate(0,0)'},{transform:'translate(-6px,4px)'},{transform:'translate(5px,-3px)'},{transform:'translate(0,0)'}],{duration:260})}catch(e){}}
