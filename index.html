@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>メダルランド</title>
 <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&family=DotGothic16&family=Mochiy+Pop+One&family=Dela+Gothic+One&family=Yusei+Magic&family=Reggae+One&display=swap" rel="stylesheet">
 <style>
@@ -1139,6 +1139,19 @@ input,textarea,select{font-size:16px}.h-in{font-size:16px!important}.ctr-sig inp
 .lb-row em{font-style:normal;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px;background:#eceff1;color:#555}.lb-row em.h{background:#ffd54a;color:#3a2400}
 .lb-st{font-size:12px;font-weight:900;color:#999}.lb-st.ok{color:#2e9d48}
 .lb-go{width:100%}.lb-go.off{filter:grayscale(.7);opacity:.75}
+body.lobbyon{background:radial-gradient(ellipse at 50% 0%,#1d2b4a 0%,#0b1020 55%,#05070d 100%) fixed!important}
+body.lobbyon::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:repeating-linear-gradient(115deg,rgba(255,255,255,.02) 0 40px,transparent 40px 110px)}
+body.lobbyon .lb-cap{color:#ffd54a;text-shadow:0 0 18px rgba(255,200,0,.35)}
+body.lobbyon .lb-code{background:#141c30;border:1px solid rgba(255,213,74,.35);box-shadow:0 6px 20px rgba(0,0,0,.5)}
+body.lobbyon .lb-code small,body.lobbyon .lb-code span{color:#8a97b3}body.lobbyon .lb-code b{color:#ffd54a;text-shadow:0 0 14px rgba(255,200,0,.4)}
+body.lobbyon .lb-row{background:#18223a;color:#e8ecf5;box-shadow:none;border:1px solid rgba(255,255,255,.07)}
+body.lobbyon .lb-row.me{outline:2px solid #ffd54a}body.lobbyon .lb-row.empty{background:rgba(255,255,255,.04);color:#56627d;border-style:dashed}
+body.lobbyon .lb-row em{background:#2a3654;color:#c8d0e2}body.lobbyon .lb-row em.h{background:#ffd54a;color:#3a2400}
+body.lobbyon .lb-st{color:#6b7896}body.lobbyon .lb-st.ok{color:#5be08a}
+body.lobbyon .link{color:#8a97b3}body.lobbyon .loading{color:#c8d0e2}
+.lb-net{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:12px;font-weight:800;color:#c8d0e2}
+.lb-net i{width:9px;height:9px;border-radius:50%;background:#ffb300;box-shadow:0 0 8px #ffb300;animation:pulse .6s infinite alternate}.lb-net i.ok{background:#5be08a;box-shadow:0 0 8px #5be08a;animation:none}.lb-net i.ng{background:#ff5252;box-shadow:0 0 8px #ff5252}
+.lb-ver{font-size:10px;color:#56627d;margin-top:4px}
 </style>
 </head>
 <body>
@@ -1436,7 +1449,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};
+const P2P_CFG={debug:0};const APP_VER='2026.11.24b';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1452,13 +1465,14 @@ function p2pJoin(name){
   const sendPres=()=>send({t:'pres',p:myPres});
   const wire=(c,isHubSide)=>{c.on('data',m=>handle(m,c));c.on('open',()=>{sendPres();if(isHubSide)Object.values(peers).forEach(p=>c.send({t:'pres',pid:p.peer,p:p.presence}))});
     c.on('close',()=>{if(isHubSide){const id=c.metadata&&c.metadata.pid;delete conns[c.peer];if(id&&peers[id]){const p=peers[id];delete peers[id];fire([],[p],[]);send({t:'bye',pid:id})}}else if(alive){peers={};fire();toast('ホストとの接続が切れました');setTimeout(()=>{if(alive){try{peer.destroy()}catch(e){}asClient()}},1500)}})};
-  let tries=0,okOnce=false;
-  const asClient=()=>{peer=new Peer(P2P_CFG);peer.on('open',()=>{hubConn=peer.connect(hubId,{reliable:true,metadata:{pid:myId}});wire(hubConn,false);
-      hubConn.on('open',()=>{okOnce=true;tries=0});
+  let tries=0,okOnce=false;window.p2pSt='サーバーに接続中…';
+  const asClient=()=>{window.p2pSt='サーバーに接続中…';peer=new Peer(P2P_CFG);peer.on('open',()=>{window.p2pSt='ホストを探しています…';hubConn=peer.connect(hubId,{reliable:true,metadata:{pid:myId}});wire(hubConn,false);
+      hubConn.on('open',()=>{okOnce=true;tries=0;window.p2pSt='ホストと接続しました'});
       setTimeout(()=>{if(alive&&hubConn&&!hubConn.open){tries++;if(tries<=3){toast('ホストに再接続しています…');try{peer.destroy()}catch(e){}asClient()}else toast('ホストにつながりません。部屋番号と、ホストが部屋を開いたままか確認してください')}},9000)});
-    peer.on('error',e=>{if(!alive)return;const t=e&&e.type;if(t==='peer-unavailable'){toast('その部屋番号の部屋が見つかりません');alive=false;setTimeout(()=>{try{exitGame()}catch(x){}},1800)}else if(t==='network'||t==='server-error'||t==='socket-error'||t==='socket-closed'){toast('通信サーバーにつながりません。電波の良い所で試してください')}})};
+    peer.on('error',e=>{if(!alive)return;const t=e&&e.type;if(t==='peer-unavailable'){window.p2pSt='部屋が見つかりません';toast('その部屋番号の部屋が見つかりません');alive=false;setTimeout(()=>{try{exitGame()}catch(x){}},1800)}else if(t==='network'||t==='server-error'||t==='socket-error'||t==='socket-closed'){toast('通信サーバーにつながりません。電波の良い所で試してください')}})};
   const start=()=>{if(!alive)return;try{peer&&peer.destroy()}catch(e){}hub=false;hubConn=null;
-    peer=new Peer(hubId,P2P_CFG);peer.on('open',()=>{hub=true});peer.on('disconnected',()=>{try{if(alive&&hub)peer.reconnect()}catch(e){}});
+    window.p2pSt='サーバーに接続中…';peer=new Peer(hubId,P2P_CFG);peer.on('open',()=>{hub=true;window.p2pSt='部屋の準備OK　友達を待っています'});
+    setTimeout(()=>{if(alive&&!hub)window.p2pSt='サーバーにつながりません。電波を確認して部屋を作り直してください'},10000);peer.on('disconnected',()=>{try{if(alive&&hub)peer.reconnect()}catch(e){}});
     peer.on('connection',c=>{conns[c.peer]=c;wire(c,true)});
     peer.on('error',e=>{const t=e&&e.type;if(t==='unavailable-id'){try{peer.destroy()}catch(_){}toast('その部屋番号は使用中です。もう一度部屋をつくってください');alive=false;setTimeout(()=>{try{exitGame()}catch(x){}},1500)}else if(alive&&(t==='network'||t==='server-error'||t==='socket-error'||t==='browser-incompatible'))toast(t==='browser-incompatible'?'このブラウザはオンライン対戦に対応していません':'通信サーバーにつながりません。電波の良い所で試してください')})};
   if(p2pRole==='host')start();else asClient();
@@ -1531,7 +1545,7 @@ function onPeersChange(ch){
 }
 
 // ================= タイトル / ロビー =================
-function renderTitle(){document.body.classList.remove('hrmode','betfit','hrsel');
+function renderTitle(){document.body.classList.remove('hrmode','betfit','hrsel','lobbyon');
   phase='title';clearTimers();document.body.classList.add('home');
   app.innerHTML=`
   <div class="h-logo"><div class="h-cap">M E D A L　L A N D</div><div class="h-b" style="font-size:44px">メダルランド</div><div class="h-line"></div></div>
@@ -1635,20 +1649,22 @@ function lobbyListHTML(){const L=[{nick:me.nick,ready:role==='host'?1:lobbyReady
   L.sort((a,b)=>(b.host?1:0)-(a.host?1:0));
   return `<div class="lb-list">${L.map(x=>`<div class="lb-row ${x.me?'me':''}"><span class="lb-av">${esc(String(x.nick).slice(0,1))}</span><b>${esc(x.nick)}</b>${x.host?'<em class="h">ホスト</em>':''}${x.me&&!x.host?'<em>あなた</em>':''}<span class="lb-st ${x.ready?'ok':''}">${x.host?'':x.ready?'準備OK':'準備中'}</span></div>`).join('')}
    ${Array.from({length:Math.max(0,4-L.length)},()=>`<div class="lb-row empty"><span class="lb-av"></span><b>あき</b></div>`).join('')}</div>`}
-function renderLobby(){document.body.classList.remove('home');
+function lobbyStatusHTML(){return `<div class="lb-net"><i class="${/OK|接続しました/.test(window.p2pSt||'')||!window.p2pSt?'ok':/つながりません|見つかりません/.test(window.p2pSt||'')?'ng':''}"></i>${esc(window.p2pSt||'接続OK')}</div><div class="lb-ver">ver ${APP_VER}　友達と同じ番号か確認してね</div>`}
+setInterval(()=>{const e=document.querySelector('.lb-net');if(e&&(phase==='lobby'||phase==='wait'))e.outerHTML=lobbyStatusHTML().split('<div class="lb-ver">')[0]},700);
+function renderLobby(){document.body.classList.remove('home');document.body.classList.add('lobbyon');
   const o=others(),allOk=o.length&&o.every(p=>p.presence.ready);
   app.innerHTML=`<div class="lobby"><div class="lb-cap">待機場</div><div class="lb-code"><small>部屋番号</small><b>${esc(code)}</b><span>友達にこの番号を伝えてね</span></div>
    ${lobbyListHTML()}
    <button class="hbtn gold lb-go ${allOk?'':'off'}" onclick="hostLobbyStart()">${!o.length?'友達を待っています…':allOk?'みんな揃った！スタート':'全員の準備OKを待っています'}</button>
-   <button class="link" onclick="exitGame()">部屋を閉じてタイトルへ</button></div>`}
+   ${lobbyStatusHTML()}<button class="link" onclick="exitGame()">部屋を閉じてタイトルへ</button></div>`}
 function renderWait(long){
-  document.body.classList.remove('home');
+  document.body.classList.remove('home');document.body.classList.add('lobbyon');
   const inLobby=hostInfo&&hostInfo.ph==='lobby';
   if(inLobby||(!hostInfo&&!long)){
     app.innerHTML=`<div class="lobby"><div class="lb-cap">待機場</div><div class="lb-code"><small>部屋番号</small><b>${esc(code)}</b><span>${hostInfo?'ホストがスタートするのを待っています':'ホストに接続中…'}</span></div>
      ${hostInfo?lobbyListHTML():'<div class="loading" style="padding-top:20px"><div class="icon"><span class="spin"></span></div></div>'}
      ${hostInfo?`<button class="hbtn ${lobbyReady?'glass':'gold'} lb-go" onclick="toggleReady()">${lobbyReady?'準備OK（取り消す）':'準備OK！'}</button>`:''}
-     <button class="link" onclick="exitGame()">タイトルにもどる</button></div>`;return}
+     ${lobbyStatusHTML()}<button class="link" onclick="exitGame()">タイトルにもどる</button></div>`;return}
   app.innerHTML=`<div class="loading"><div class="icon"><span class="spin"></span></div><div>部屋 ${esc(code)} に入りました</div><div style="font-size:14px;color:#666;margin-top:8px">ホストのレースを待っています…</div>
   ${long?`<div class="note" style="margin-top:14px">部屋番号が合っているか、ホストが部屋を開いているか確認してね</div>`:''}
   <button class="link" onclick="exitGame()">タイトルにもどる</button></div>`;
@@ -1666,7 +1682,7 @@ async function exitGame(){
 function clearTimers(){clearInterval(tickTimer);clearInterval(resultTimer);tickTimer=resultTimer=null}
 
 // ================= ホスト進行 =================
-function hostStartBet(){
+function hostStartBet(){document.body.classList.remove('lobbyon');
   clearTimers();document.body.classList.remove('home');
   app.innerHTML=`<div class="loading"><div class="icon"><span class="spin"></span></div><div>パドックに馬が入場中…</div></div>`;
   setTimeout(()=>{
@@ -1703,7 +1719,7 @@ function bgmStart(){bgmStop();const a=ac();if(!a)return;bgmNext=a.currentTime+0.
       bgmNext+=st*(hurry?0.82:1);bgmStep++}
   },60)}
 function bgmStop(){clearInterval(bgmTimer);bgmTimer=null}
-function beginBetLocal(){
+function beginBetLocal(){document.body.classList.remove('lobbyon');
   myBets={};betHist=[];myCarrot=false;mode=0;phase='bet';setTimeout(bgmStart,50);
   let debtNew=false;
   if(me.medals<=0&&(me.bank||0)>0){const v=Math.min(me.bank,START_MEDALS);me.bank-=v;me.medals+=v;saveMe();setTimeout(()=>toast(`貯金から${v}枚引き出しました`),300)}
