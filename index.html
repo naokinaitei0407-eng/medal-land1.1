@@ -1436,10 +1436,8 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={config:{iceServers:[{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']},
-  {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-  {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
-  {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}]},debug:0};
+const P2P_CFG={debug:0};
+let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
   const L={},PF=[];let peers={},myPres={},hub=false,conns={},hubConn=null,peer=null,alive=true;
@@ -1453,17 +1451,17 @@ function p2pJoin(name){
   const send=m=>{m.pid=myId;if(hub)Object.values(conns).forEach(c=>{if(c.open)c.send(m)});else if(hubConn&&hubConn.open)hubConn.send(m)};
   const sendPres=()=>send({t:'pres',p:myPres});
   const wire=(c,isHubSide)=>{c.on('data',m=>handle(m,c));c.on('open',()=>{sendPres();if(isHubSide)Object.values(peers).forEach(p=>c.send({t:'pres',pid:p.peer,p:p.presence}))});
-    c.on('close',()=>{if(isHubSide){const id=c.metadata&&c.metadata.pid;delete conns[c.peer];if(id&&peers[id]){const p=peers[id];delete peers[id];fire([],[p],[]);send({t:'bye',pid:id})}}else if(alive){peers={};fire();setTimeout(start,800)}})};
+    c.on('close',()=>{if(isHubSide){const id=c.metadata&&c.metadata.pid;delete conns[c.peer];if(id&&peers[id]){const p=peers[id];delete peers[id];fire([],[p],[]);send({t:'bye',pid:id})}}else if(alive){peers={};fire();toast('ホストとの接続が切れました');setTimeout(()=>{if(alive){try{peer.destroy()}catch(e){}asClient()}},1500)}})};
   let tries=0,okOnce=false;
-  const asClient=()=>{peer=new Peer(P2P_CFG);peer.on('open',()=>{hubConn=peer.connect(hubId,{reliable:true,serialization:'json',metadata:{pid:myId}});wire(hubConn,false);
+  const asClient=()=>{peer=new Peer(P2P_CFG);peer.on('open',()=>{hubConn=peer.connect(hubId,{reliable:true,metadata:{pid:myId}});wire(hubConn,false);
       hubConn.on('open',()=>{okOnce=true;tries=0});
-      setTimeout(()=>{if(alive&&hubConn&&!hubConn.open){tries++;if(tries<=3){toast('ホストに再接続しています…');start()}else toast('ホストにつながりません。部屋番号と、ホストが部屋を開いたままか確認してください')}},9000)});
-    peer.on('error',e=>{if(!alive)return;const t=e&&e.type;if(t==='peer-unavailable'){toast('その部屋番号の部屋が見つかりません')}else if(t==='network'||t==='server-error'||t==='socket-error'||t==='socket-closed'){toast('通信サーバーにつながりません。電波の良い所で試してください')}})};
+      setTimeout(()=>{if(alive&&hubConn&&!hubConn.open){tries++;if(tries<=3){toast('ホストに再接続しています…');try{peer.destroy()}catch(e){}asClient()}else toast('ホストにつながりません。部屋番号と、ホストが部屋を開いたままか確認してください')}},9000)});
+    peer.on('error',e=>{if(!alive)return;const t=e&&e.type;if(t==='peer-unavailable'){toast('その部屋番号の部屋が見つかりません');alive=false;setTimeout(()=>{try{exitGame()}catch(x){}},1800)}else if(t==='network'||t==='server-error'||t==='socket-error'||t==='socket-closed'){toast('通信サーバーにつながりません。電波の良い所で試してください')}})};
   const start=()=>{if(!alive)return;try{peer&&peer.destroy()}catch(e){}hub=false;hubConn=null;
     peer=new Peer(hubId,P2P_CFG);peer.on('open',()=>{hub=true});peer.on('disconnected',()=>{try{if(alive&&hub)peer.reconnect()}catch(e){}});
     peer.on('connection',c=>{conns[c.peer]=c;wire(c,true)});
-    peer.on('error',e=>{const t=e&&e.type;if(t==='unavailable-id'){try{peer.destroy()}catch(_){}asClient()}else if(alive&&(t==='network'||t==='server-error'||t==='socket-error'||t==='browser-incompatible'))toast(t==='browser-incompatible'?'このブラウザはオンライン対戦に対応していません':'通信サーバーにつながりません。電波の良い所で試してください')})};
-  start();
+    peer.on('error',e=>{const t=e&&e.type;if(t==='unavailable-id'){try{peer.destroy()}catch(_){}toast('その部屋番号は使用中です。もう一度部屋をつくってください');alive=false;setTimeout(()=>{try{exitGame()}catch(x){}},1500)}else if(alive&&(t==='network'||t==='server-error'||t==='socket-error'||t==='browser-incompatible'))toast(t==='browser-incompatible'?'このブラウザはオンライン対戦に対応していません':'通信サーバーにつながりません。電波の良い所で試してください')})};
+  if(p2pRole==='host')start();else asClient();
   window.addEventListener('pagehide',()=>{try{send({t:'bye'})}catch(e){}});
   return {name,
     emit(t,d){send({t:'ev',topic:t,data:d});return Promise.resolve()},
@@ -1613,7 +1611,7 @@ function loadWorld(){W=lsGet(WORLD_KEY);if(!W||!W.stable)newWorld()}
 function saveWorld(){lsSet(WORLD_KEY,W)}
 async function startHost(){
   if(!readNick())return;
-  code=String(1000+Math.floor(rnd()*9000));
+  code=String(1000+Math.floor(Math.random()*9000));p2pRole='host';
   try{await joinRoom(code)}catch(e){toast('部屋をつくれませんでした');return}
   role='host';loadWorld();phase='lobby';lobbyReady=true;myPresence();renderLobby();
 }
@@ -1622,6 +1620,7 @@ async function startClient(){
   if(!readNick())return;
   const c=(document.getElementById('code').value||'').replace(/\D/g,'');
   if(c.length!==4){toast('4ケタの部屋番号を入れてね');return}
+  p2pRole='client';
   try{await joinRoom(c)}catch(e){toast('部屋に入れませんでした');return}
   code=c;role='client';card=null;race=null;settledRn=0;phase='wait';hostInfo=null;lobbyReady=false;
   myPresence();renderWait();
