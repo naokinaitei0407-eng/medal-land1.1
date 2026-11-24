@@ -179,6 +179,16 @@ canvas{width:100%;height:330px;display:block;border-radius:14px;box-shadow:0 4px
 .rkr-s{text-align:center}.rkr-cap{font-size:10px;letter-spacing:4px;color:#c8a24a;font-weight:900}.rkr-s p{font-size:13px;line-height:1.7}.rkr-s p b{color:#e65100;font-size:18px}
 .rkr-name{margin:10px auto;padding:8px 12px;border:1px dashed #8a6a2e;border-radius:8px;max-width:240px;background:#fff8e1}.rkr-name small{display:block;font-size:10px;color:#8a6a2e;font-weight:800}.rkr-name b{font-size:20px;color:#2a1c08;font-family:'Hiragino Mincho ProN','Yu Mincho',serif}
 .tapgo{position:fixed;inset:0;z-index:500;background:rgba(6,10,22,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:10px}.tapgo b{font-size:30px;letter-spacing:4px}.tapgo span{font-size:13px;color:#ffd54a;font-weight:800;animation:tutp 1.2s infinite}
+.frz{position:fixed;inset:0;z-index:84;pointer-events:none;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;animation:fadein .1s}
+.frz span{color:#fff;font-size:28px;font-weight:900;letter-spacing:6px;text-shadow:0 2px 6px #000}
+.bko{position:fixed;inset:0;z-index:88;background:#000;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.bko-line{position:absolute;left:0;right:0;top:50%;height:100%;transform:translateY(-50%);background:#fff;animation:bkol .45s cubic-bezier(.6,0,.9,.4) forwards}
+@keyframes bkol{0%{height:100%;opacity:1}55%{height:3px;left:0;right:0}85%{height:3px;left:49%;right:49%;opacity:1}100%{height:0;left:50%;right:50%;opacity:0}}
+.bko-t{text-align:center;opacity:0;animation:bkot .5s 1.2s cubic-bezier(.2,1.6,.4,1) forwards}
+.bko-t b{display:block;font-size:46px;font-family:'Dela Gothic One','M PLUS Rounded 1c',sans-serif;background:linear-gradient(90deg,#ff1744,#ff9100,#ffea00,#00e676,#2979ff,#d500f9,#ff1744);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:slide 1s linear infinite}
+.bko-t span{display:block;color:#fff;font-weight:900;font-size:16px;letter-spacing:2px;margin-top:6px}
+@keyframes bkot{from{opacity:0;transform:scale(2.4)}to{opacity:1;transform:none}}
+.bko.out{animation:fadeout .5s forwards}
 .tut{position:fixed;inset:0;z-index:400;touch-action:none}
 .tut-hole{position:absolute;border-radius:12px;box-shadow:0 0 0 9999px rgba(6,10,24,.8);border:3px solid #ffd54a;transition:all .28s;pointer-events:none;animation:tutp 1.2s infinite}
 @keyframes tutp{50%{border-color:#fff}}
@@ -1506,7 +1516,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24m';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24n';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1833,6 +1843,8 @@ function machineBias(betsList){
   }
   // 高配当が出やすいよう、ときどき人気薄に追い風
   {const ls=[1,2,3,4,5,6].filter(n=>r.odds.w[n]>=8);if(ls.length&&rnd()<0.2){const n=pick(ls);bias[n]+=0.028+rnd()*0.022}}
+  // 100倍以上の決着が起きやすいよう、ときどき人気薄2頭そろって追い風
+  {const ls=[1,2,3,4,5,6].sort((a,b)=>r.odds.w[b]-r.odds.w[a]).slice(0,4);if(rnd()<0.16){const a=pick(ls);let b=pick(ls);if(b===a)b=ls[(ls.indexOf(a)+1)%ls.length];bias[a]+=0.045+rnd()*0.02;bias[b]+=0.035+rnd()*0.02}}
   return bias;
 }
 function showCloseFx(){
@@ -1885,6 +1897,14 @@ function hostEvent(type,x){
   if(type==='stumble')hsay(`あっと！${hn(x)}、障害で躓いた！`);
   if(type==='finish'&&eng.rs.filter(y=>y.fin).length===1)hsay(`ゴール！！ 1着は ${hn(x)}！`);
 }
+function hi100(r,a,b){const o=r.odds;return o.w[a]>=100||(o.q[pkey(a,b)]||0)>=100||(o.e[a+'_'+b]||0)>=100}
+function hiPay(r,a,b){const o=r.odds;return Math.max(o.w[a]||0,o.q[pkey(a,b)]||0,o.e[a+'_'+b]||0)}
+// 演出1：フリーズ（パチスロのフリーズ演出を参考）
+function frzFx(){try{bgmStop()}catch(e){}tone(40,0,0.5,'sine',0.35);const d=document.createElement('div');d.className='frz';d.innerHTML='<span>……</span>';document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
+// 演出2：ブラックアウト（プチュン）
+function blackoutFx(){const d=document.createElement('div');d.className='bko';d.innerHTML='<div class="bko-line"></div><div class="bko-t"><b>超高配当</b><span>100倍オーバー決着!!</span></div>';document.body.appendChild(d);
+  try{const a=ac();if(a){const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;o.type='square';o.frequency.setValueAtTime(1800,t);o.frequency.exponentialRampToValueAtTime(60,t+0.25);g.gain.setValueAtTime(0.2,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.32)}}catch(e){}
+  setTimeout(()=>{try{SFX.fanfare()}catch(e){}},1300);setTimeout(()=>d.classList.add('out'),2900);setTimeout(()=>d.remove(),3400)}
 function orderOf(rs){return [...rs].sort((a,b)=>{if(a.fin&&b.fin)return a.ft-b.ft;if(a.fin)return -1;if(b.fin)return 1;return b.d-a.d})}
 function hostCommentary(){
   const r=eng.r,o=orderOf(eng.rs),lead=o[0],ms=eng.ms,rem=r.dist-lead.d;
@@ -1922,7 +1942,9 @@ function hostLoop(ts){
       {const ld=Math.max(...eng.rs.map(x=>x.d))/r.dist;
        if(eng.sb){eng.sb.t-=dt;if(eng.sb.t<=0)eng.sb=null}
        if(!eng.sb&&eng.sbq.length&&ld>=eng.sbq[0]){eng.sbq.shift();const cs=eng.rs.filter(x=>!x.fin);if(cs.length)eng.sb={no:pick(cs).no,i:Math.floor(rnd()*MUTTER.length),t:2.4}}}
-      eng.acc+=dt*(r.dist/16.3)/(18.75*durK(r.dist))*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
+      if(!eng.frzDone){const o=orderOf(eng.rs),rem=r.dist-o[0].d;if(rem<30&&rem>6&&!o[0].fin&&hi100(r,o[0].no,o[1].no)){eng.frzDone=1;if(Math.random()<0.7)eng.frz=1.3}}
+      if(eng.frz>0)eng.frz-=dt;
+      eng.acc+=(eng.frz>0?0:1)*dt*(r.dist/16.3)/(18.75*durK(r.dist))*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
       while(eng.acc>=0.1){stepRunners(eng.rs,r,0.1,eng.t,hostEvent);eng.t+=0.1;eng.acc-=0.1}
       hostControl(dt);
       eng.rs.forEach(x=>{if(x.bump>0)x.bump-=dt});
@@ -1934,6 +1956,7 @@ function hostLoop(ts){
         hsay(`${c.who}のにんじん ${['ミス…','GOOD','GREAT!','PERFECT!!'][jd]}　`+(pw>=0.7?`${hn(x)}が一気に加速！`:pw>=0.35?`${x.no}番が加速！`:`${x.no}番、少しだけ加速`))}});
       eng.pops.forEach(pp=>pp.t+=dt);eng.pops=eng.pops.filter(pp=>pp.t<1.2);
       hostCommentary();
+      if(!eng.bkDone){const fins=eng.rs.filter(x=>x.fin);if(fins.length>=2){eng.bkDone=1;const o=orderOf(eng.rs);if(hi100(r,o[0].no,o[1].no))eng.bk=1}}
       if(eng.rs.every(x=>x.fin)){
         if(eng.endWait===null){eng.endWait=2.2;const o=orderOf(eng.rs);if(o[1].ft-o[0].ft<0.07){eng.photo=1;eng.endWait=4.2;hsay('写真判定…！')}
           if(!eng.photo){const wo=eng.r.odds.w[o[0].no],eo=eng.r.odds.e[o[0].no+'_'+o[1].no];hsay(wo>=100?`大波乱！！ ${o[0].no}番が単勝${fo(wo)}倍で勝利！ 2着${o[1].no}番`:eo>=100?`高配当決着！ ${o[0].no}→${o[1].no} 馬単${fo(eo)}倍！`:`確定！ 1着${o[0].no}番 2着${o[1].no}番`)}
@@ -1943,11 +1966,11 @@ function hostLoop(ts){
     }
   }
   // 配信（約8回/秒）
-  const snap={dm:eng.dmT||0,rn:race.rn,mt:eng.moti&&eng.moti.on?eng.moti.nos:0,sb:eng.sb?[eng.sb.no,eng.sb.i]:0,aw:eng.awk&&eng.awk.on?eng.awk.no:0,ph2:eng.photo?1:0,sl:eng.slow<1?1:0,cd:+eng.count.toFixed(2),d:eng.rs.map(x=>+(x.d+x.post).toFixed(1)),f:eng.rs.map(x=>x.fin?1:0),bo:eng.rs.map(x=>x.boost>0&&!x.fin?1:0),bu:eng.rs.map(x=>x.bump>0?1:0),cm:eng.cm,
+  const snap={fz:eng.frz>0?1:0,bk:eng.bk?1:0,dm:eng.dmT||0,rn:race.rn,mt:eng.moti&&eng.moti.on?eng.moti.nos:0,sb:eng.sb?[eng.sb.no,eng.sb.i]:0,aw:eng.awk&&eng.awk.on?eng.awk.no:0,ph2:eng.photo?1:0,sl:eng.slow<1?1:0,cd:+eng.count.toFixed(2),d:eng.rs.map(x=>+(x.d+x.post).toFixed(1)),f:eng.rs.map(x=>x.fin?1:0),bo:eng.rs.map(x=>x.boost>0&&!x.fin?1:0),bu:eng.rs.map(x=>x.bump>0?1:0),cm:eng.cm,
     cr:eng.carrots.filter(c=>!c.done).map(c=>[c.no,+c.t.toFixed(2)]),pp:(eng.pops||[]).map(pp=>[pp.no,pp.j,+pp.t.toFixed(2)])};
   if(ts-eng.lastEmit>125){eng.lastEmit=ts;emit('pos',snap)}
-  view.cur=snap;
-  drawRace(snap.d,snap);
+  view.cur=snap;snap.dl=eng.rs.map(x=>x.d+x.post+(eng.frz>0?0:(x.fin?x.v*0.55:x.v)*eng.acc));
+  drawRace(snap.dl,snap);
   requestAnimationFrame(hostLoop);
 }
 function hostFinish(){
@@ -2021,7 +2044,7 @@ function clientLoop(){
   if(role!=='client'||phase!=='race'||!view)return;
   const sn=view.snaps;
   if(sn.length){
-    const rt=performance.now()-180;
+    const rt=performance.now()-260;
     let pos,cur=sn[sn.length-1].s;
     if(sn.length===1||rt<=sn[0].at)pos=sn[0].d;
     else{
@@ -2796,7 +2819,8 @@ function lanesFor(pos){
 }
 function drawRace(pos,snap){
   if(!view)return;
-  const r=race,c=view.ctx,Wd=view.CW,Hd=view.CH,dpr=view.dpr,s0=startS(r),now=performance.now();
+  const r=race,c=view.ctx,Wd=view.CW,Hd=view.CH,dpr=view.dpr,s0=startS(r);let now=performance.now();if(snap.fz){if(!view.fzT){view.fzT=now;frzFx()}now=view.fzT}else view.fzT=0;
+  if(snap.bk&&!view.bkShown){view.bkShown=1;blackoutFx()}
   const pre=snap.cd>0,GI=[1,3,5,2,4,6];
   const ing=[0,1,2,3,4,5].map(i=>!pre||snap.cd<6.4-(((r.rn||1)*37+i*61+(r.dist|0))%97)/97*1.6);
   // 表示用の距離（差を2.2倍に広げて見やすく）
@@ -2806,7 +2830,7 @@ function drawRace(pos,snap){
   const PW=-4,LW=Wd;
   const lead0=Math.max(...pos),prog=Math.min(1,lead0/r.dist);
   if(!pre&&!view.goAt)view.goAt=view.prevCd>0?now:now-9999;
-  const fevr=!pre&&prog>0.82&&!(snap.f&&snap.f.filter(Boolean).length>=2)?(prog-0.82)/0.18:0;const shk=fevr*1.6;
+  const fevr=!pre&&prog>0.82&&!(snap.f&&snap.f.filter(Boolean).length>=2)?(prog-0.82)/0.18:0;const shk=0;
   const shx=shk?(Math.random()-.5)*shk*2:0,shy=shk?(Math.random()-.5)*shk*2:0;
   const night=r.time==='yoru',eve=r.time==='yu'||r.time==='yuu',wet=r.weather==='rain';
   const skyH=Hd*0.17,stH=Hd*0.1,railY=skyH+stH,laneTop=railY+10,laneBot=Hd-26,laneH=(laneBot-laneTop)/6;
@@ -3022,6 +3046,15 @@ function drawRace(pos,snap){
       c.fillStyle=f.bg;c.beginPath();c.roundRect(x-8,y-8,16,16,4);c.fill();if(f.bg==='#ffffff'){c.strokeStyle='#888';c.lineWidth=1;c.stroke()}
       c.fillStyle=f.fg;c.font='900 10px "M PLUS Rounded 1c",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(i+1,x,y+0.5);c.textBaseline='alphabetic'});
     c.restore()}
+  // 演出3：虹色予告（パチンコの虹＝激アツを参考）
+  if(!pre&&prog>0.7&&ord.length>1&&hi100(race,ord[0]+1,ord[1]+1)&&!(snap.f&&snap.f.filter(Boolean).length>=2)){
+    if(!view.rbAt){view.rbAt=now;try{[1047,1319,1568,2093].forEach((f,i)=>tone(f,i*0.06,0.18,'triangle',0.07))}catch(e){}}
+    const hue=(now/6)%360,lw=7;c.save();c.lineWidth=lw;
+    const g=c.createLinearGradient(0,0,Wd,Hd);for(let k=0;k<=6;k++)g.addColorStop(k/6,`hsl(${(hue+k*60)%360},100%,60%)`);c.strokeStyle=g;c.globalAlpha=0.75+0.25*Math.sin(now/90);c.strokeRect(lw/2,lw/2,Wd-lw,Hd-lw);
+    const mult=Math.floor(hiPay(race,ord[0]+1,ord[1]+1));c.globalAlpha=1;c.font='15px "Dela Gothic One","M PLUS Rounded 1c",sans-serif';c.textAlign='center';
+    const tx=Wd/2,ty=94;c.lineWidth=5;c.strokeStyle='rgba(0,0,0,.65)';const msg=`${ord[0]+1}-${ord[1]+1} なら ${mult}倍!?`;c.strokeText(msg,tx,ty);
+    const tg=c.createLinearGradient(tx-90,0,tx+90,0);for(let k=0;k<=6;k++)tg.addColorStop(k/6,`hsl(${(hue+k*60)%360},100%,65%)`);c.fillStyle=tg;c.fillText(msg,tx,ty);c.restore()}
+  else view.rbAt=0;
   // 当たりそうな馬券の更新
   if(!view.odAt||now-view.odAt>250){view.odAt=now;const t0=ord[0]+1,t1=ord[1]+1,qk=pkey(t0,t1),ek=t0+'_'+t1;
     document.querySelectorAll('.mbr').forEach(el=>{const k=el.dataset.k,t=k[0],v=k.slice(1);el.classList.toggle('hot',!pre&&(t==='w'?+v===t0:t==='q'?v===qk:v===ek))})}
