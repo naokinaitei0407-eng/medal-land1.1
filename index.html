@@ -179,16 +179,7 @@ canvas{width:100%;height:330px;display:block;border-radius:14px;box-shadow:0 4px
 .rkr-s{text-align:center}.rkr-cap{font-size:10px;letter-spacing:4px;color:#c8a24a;font-weight:900}.rkr-s p{font-size:13px;line-height:1.7}.rkr-s p b{color:#e65100;font-size:18px}
 .rkr-name{margin:10px auto;padding:8px 12px;border:1px dashed #8a6a2e;border-radius:8px;max-width:240px;background:#fff8e1}.rkr-name small{display:block;font-size:10px;color:#8a6a2e;font-weight:800}.rkr-name b{font-size:20px;color:#2a1c08;font-family:'Hiragino Mincho ProN','Yu Mincho',serif}
 .tapgo{position:fixed;inset:0;z-index:500;background:rgba(6,10,22,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:10px}.tapgo b{font-size:30px;letter-spacing:4px}.tapgo span{font-size:13px;color:#ffd54a;font-weight:800;animation:tutp 1.2s infinite}
-.frz{position:fixed;inset:0;z-index:84;pointer-events:none;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;animation:fadein .1s}
-.frz span{color:#fff;font-size:28px;font-weight:900;letter-spacing:6px;text-shadow:0 2px 6px #000}
-.bko{position:fixed;inset:0;z-index:88;background:#000;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.bko-line{position:absolute;left:0;right:0;top:50%;height:100%;transform:translateY(-50%);background:#fff;animation:bkol .45s cubic-bezier(.6,0,.9,.4) forwards}
-@keyframes bkol{0%{height:100%;opacity:1}55%{height:3px;left:0;right:0}85%{height:3px;left:49%;right:49%;opacity:1}100%{height:0;left:50%;right:50%;opacity:0}}
-.bko-t{text-align:center;opacity:0;animation:bkot .5s 1.2s cubic-bezier(.2,1.6,.4,1) forwards}
-.bko-t b{display:block;font-size:46px;font-family:'Dela Gothic One','M PLUS Rounded 1c',sans-serif;background:linear-gradient(90deg,#ff1744,#ff9100,#ffea00,#00e676,#2979ff,#d500f9,#ff1744);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:slide 1s linear infinite}
-.bko-t span{display:block;color:#fff;font-weight:900;font-size:16px;letter-spacing:2px;margin-top:6px}
-@keyframes bkot{from{opacity:0;transform:scale(2.4)}to{opacity:1;transform:none}}
-.bko.out{animation:fadeout .5s forwards}
+.rk-notion{display:block;text-align:center;margin:8px 0 4px;padding:9px;border-radius:12px;background:#fff;color:#191919;border:2px solid #191919;font-weight:900;font-size:13px;text-decoration:none}
 .tut{position:fixed;inset:0;z-index:400;touch-action:none}
 .tut-hole{position:absolute;border-radius:12px;box-shadow:0 0 0 9999px rgba(6,10,24,.8);border:3px solid #ffd54a;transition:all .28s;pointer-events:none;animation:tutp 1.2s infinite}
 @keyframes tutp{50%{border-color:#fff}}
@@ -1300,6 +1291,7 @@ const PMARK=['◎','○','▲','△'];
 const NA=['サクラ','ハヤテ','ミラクル','ゴールド','シルバー','ブルー','レッド','キング','プリンス','スター','ムーン','サニー','ポンポコ','モフモフ','カゼノ','ヨゾラ','アサヒ','ユメノ','ニンジン','コハク','ヒナタ','イナズマ'];
 const NB=['ダッシュ','ボルト','ロケット','ハート','ウイング','ジェット','マーチ','ブレイブ','スマイル','トルネード','カイザー','パレード','ステップ','フラッシュ','タイフーン','チャンプ','ドリーム','ノヴァ','クイーン','モンブラン','ランナー','ビート'];
 const DPR=Math.min(1.5,window.devicePixelRatio||1);
+const NOTION_RANK='https://www.notion.so/422e5b779cc181abb1a1d3a2cbc0fd72';
 function raf2(f,ms){setTimeout(()=>requestAnimationFrame(f),ms)}
 const BET_TIME=30, START_MEDALS=100, MAX_CELL=99;
 const PROF_KEY='atsumare-derby-prof-v2', WORLD_KEY='atsumare-derby-world-v4';
@@ -1516,7 +1508,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24n';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24o';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1899,12 +1891,6 @@ function hostEvent(type,x){
 }
 function hi100(r,a,b){const o=r.odds;return o.w[a]>=100||(o.q[pkey(a,b)]||0)>=100||(o.e[a+'_'+b]||0)>=100}
 function hiPay(r,a,b){const o=r.odds;return Math.max(o.w[a]||0,o.q[pkey(a,b)]||0,o.e[a+'_'+b]||0)}
-// 演出1：フリーズ（パチスロのフリーズ演出を参考）
-function frzFx(){try{bgmStop()}catch(e){}tone(40,0,0.5,'sine',0.35);const d=document.createElement('div');d.className='frz';d.innerHTML='<span>……</span>';document.body.appendChild(d);setTimeout(()=>d.remove(),1400)}
-// 演出2：ブラックアウト（プチュン）
-function blackoutFx(){const d=document.createElement('div');d.className='bko';d.innerHTML='<div class="bko-line"></div><div class="bko-t"><b>超高配当</b><span>100倍オーバー決着!!</span></div>';document.body.appendChild(d);
-  try{const a=ac();if(a){const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;o.type='square';o.frequency.setValueAtTime(1800,t);o.frequency.exponentialRampToValueAtTime(60,t+0.25);g.gain.setValueAtTime(0.2,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+0.32)}}catch(e){}
-  setTimeout(()=>{try{SFX.fanfare()}catch(e){}},1300);setTimeout(()=>d.classList.add('out'),2900);setTimeout(()=>d.remove(),3400)}
 function orderOf(rs){return [...rs].sort((a,b)=>{if(a.fin&&b.fin)return a.ft-b.ft;if(a.fin)return -1;if(b.fin)return 1;return b.d-a.d})}
 function hostCommentary(){
   const r=eng.r,o=orderOf(eng.rs),lead=o[0],ms=eng.ms,rem=r.dist-lead.d;
@@ -1942,7 +1928,6 @@ function hostLoop(ts){
       {const ld=Math.max(...eng.rs.map(x=>x.d))/r.dist;
        if(eng.sb){eng.sb.t-=dt;if(eng.sb.t<=0)eng.sb=null}
        if(!eng.sb&&eng.sbq.length&&ld>=eng.sbq[0]){eng.sbq.shift();const cs=eng.rs.filter(x=>!x.fin);if(cs.length)eng.sb={no:pick(cs).no,i:Math.floor(rnd()*MUTTER.length),t:2.4}}}
-      if(!eng.frzDone){const o=orderOf(eng.rs),rem=r.dist-o[0].d;if(rem<30&&rem>6&&!o[0].fin&&hi100(r,o[0].no,o[1].no)){eng.frzDone=1;if(Math.random()<0.7)eng.frz=1.3}}
       if(eng.frz>0)eng.frz-=dt;
       eng.acc+=(eng.frz>0?0:1)*dt*(r.dist/16.3)/(18.75*durK(r.dist))*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
       while(eng.acc>=0.1){stepRunners(eng.rs,r,0.1,eng.t,hostEvent);eng.t+=0.1;eng.acc-=0.1}
@@ -1956,7 +1941,6 @@ function hostLoop(ts){
         hsay(`${c.who}のにんじん ${['ミス…','GOOD','GREAT!','PERFECT!!'][jd]}　`+(pw>=0.7?`${hn(x)}が一気に加速！`:pw>=0.35?`${x.no}番が加速！`:`${x.no}番、少しだけ加速`))}});
       eng.pops.forEach(pp=>pp.t+=dt);eng.pops=eng.pops.filter(pp=>pp.t<1.2);
       hostCommentary();
-      if(!eng.bkDone){const fins=eng.rs.filter(x=>x.fin);if(fins.length>=2){eng.bkDone=1;const o=orderOf(eng.rs);if(hi100(r,o[0].no,o[1].no))eng.bk=1}}
       if(eng.rs.every(x=>x.fin)){
         if(eng.endWait===null){eng.endWait=2.2;const o=orderOf(eng.rs);if(o[1].ft-o[0].ft<0.07){eng.photo=1;eng.endWait=4.2;hsay('写真判定…！')}
           if(!eng.photo){const wo=eng.r.odds.w[o[0].no],eo=eng.r.odds.e[o[0].no+'_'+o[1].no];hsay(wo>=100?`大波乱！！ ${o[0].no}番が単勝${fo(wo)}倍で勝利！ 2着${o[1].no}番`:eo>=100?`高配当決着！ ${o[0].no}→${o[1].no} 馬単${fo(eo)}倍！`:`確定！ 1着${o[0].no}番 2着${o[1].no}番`)}
@@ -2819,8 +2803,7 @@ function lanesFor(pos){
 }
 function drawRace(pos,snap){
   if(!view)return;
-  const r=race,c=view.ctx,Wd=view.CW,Hd=view.CH,dpr=view.dpr,s0=startS(r);let now=performance.now();if(snap.fz){if(!view.fzT){view.fzT=now;frzFx()}now=view.fzT}else view.fzT=0;
-  if(snap.bk&&!view.bkShown){view.bkShown=1;blackoutFx()}
+  const r=race,c=view.ctx,Wd=view.CW,Hd=view.CH,dpr=view.dpr,s0=startS(r);let now=performance.now();
   const pre=snap.cd>0,GI=[1,3,5,2,4,6];
   const ing=[0,1,2,3,4,5].map(i=>!pre||snap.cd<6.4-(((r.rn||1)*37+i*61+(r.dist|0))%97)/97*1.6);
   // 表示用の距離（差を2.2倍に広げて見やすく）
@@ -3420,7 +3403,7 @@ function showRanking(tab){
   const m=document.createElement('div');m.className='modal';m.onclick=e=>{if(e.target===m)m.remove()};
   m.innerHTML=`<div class="sheet zsheet rksheet"><h2>ランキング</h2>
     <div class="rk-tabs"><button data-t="wa">所持メダル</button><button data-t="ww">最大獲得</button></div>
-    <div class="rk-body" id="rkb"></div><button class="big green" id="rkc">とじる</button></div>`;
+    <div class="rk-body" id="rkb"></div><a class="rk-notion" href="${NOTION_RANK}" target="_blank" rel="noopener">Notionで全体ランキングを見る</a><button class="big green" id="rkc">とじる</button></div>`;
   document.body.appendChild(m);m.querySelector('#rkc').onclick=()=>m.remove();
   const body=m.querySelector('#rkb');
   const row=(i,n,v,mine,tag)=>{v=+v||0;return `<div class="rk-row ${mine?'me':''}"><span class="rk-n">${i<3&&i>=0?`<i class="rk${i+1}">${i+1}</i>`:i<0?'-':i+1}</span><span class="rk-nm">${esc(n)}${mine?'<em>あなた</em>':tag||''}</span><b class="${v<0?'rk-neg':'rk-pos'}">${v<0?'△'+Math.abs(v).toLocaleString():'+'+v.toLocaleString()}</b></div>`};
