@@ -1483,7 +1483,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24e';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24f';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1891,14 +1891,14 @@ function hostLoop(ts){
       if(eng.moti&&!eng.moti.on&&eng.count<4.6){eng.moti.on=true;eng.moti.nos.forEach(n=>{const x=eng.rs[n-1];x.base*=1.045;x.thr=Math.min(1,x.thr+0.12)});hsay(eng.moti.nos.length>1?`なんと！ ${eng.moti.nos.join('番と')}番、2頭そろってやる気ぐーん！`:`おっと！ ${hn(eng.rs[eng.moti.nos[0]-1])}のやる気がぐーんと上がった！`)}
       if(!ms.g3&&eng.count<1.2){ms.g3=1;hsay('スタート…！')}}
     else{
-      {const o=orderOf(eng.rs),lead=o[0],rem=r.dist-lead.d,close=!lead.fin&&Math.abs(o[0].d-o[1].d)<5;eng.slow=rem<160&&rem>0&&close?0.32:1}
+      {const o=orderOf(eng.rs),lead=o[0],rem=r.dist-lead.d,sec=o[1],rem2=r.dist-sec.d;eng.slow=(rem<90&&rem>0)||(lead.fin&&!sec.fin&&rem2<40)?0.3:1}
       if(eng.awk&&!eng.awk.on){const x=eng.rs[eng.awk.no-1];if(!x.fin&&x.d>=eng.awk.trig){eng.awk.on=true;{const ld=Math.max(...eng.rs.map(y=>y.d)),rem=r.dist-x.d;x.base*=1.06+Math.min(0.3,(ld-x.d)/Math.max(80,rem)*1.15)+0.08;}x.thr=1;x.stun=0;eng.cut=1.0;hsay(`な、なんと――！ ${hn(x)}が覚醒したぁぁ！！`)}}
       if(eng.cut>0)eng.cut-=dt;
       if(eng.r.dark&&!eng.dkOn){const x=eng.rs[eng.r.dark-1];if(!x.fin&&x.d>=r.dist*0.6){eng.dkOn=true;x.base*=1.10;x.thr=1;hsay('雨の中から…ダークホースが襲いかかる！！')}}
       {const ld=Math.max(...eng.rs.map(x=>x.d))/r.dist;
        if(eng.sb){eng.sb.t-=dt;if(eng.sb.t<=0)eng.sb=null}
        if(!eng.sb&&eng.sbq.length&&ld>=eng.sbq[0]){eng.sbq.shift();const cs=eng.rs.filter(x=>!x.fin);if(cs.length)eng.sb={no:pick(cs).no,i:Math.floor(rnd()*MUTTER.length),t:2.4}}}
-      eng.acc+=dt*(r.dist/16.3)/14*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
+      eng.acc+=dt*(r.dist/16.3)/14*1.6*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
       while(eng.acc>=0.1){stepRunners(eng.rs,r,0.1,eng.t,hostEvent);eng.t+=0.1;eng.acc-=0.1}
       hostControl(dt);
       eng.rs.forEach(x=>{if(x.bump>0)x.bump-=dt});
@@ -2633,13 +2633,7 @@ function omakase(){
 let voxV=null,voxLast='',voxAt=0;
 function voxPick(){try{const vs=speechSynthesis.getVoices().filter(v=>/^ja/i.test(v.lang));if(!vs.length)return null;
   return vs.find(v=>/kyoko|o-ren|nanami|haruka|ayumi|female|女性/i.test(v.name))||vs.find(v=>/google/i.test(v.name))||vs[0]}catch(e){return null}}
-try{if(window.speechSynthesis){speechSynthesis.onvoiceschanged=()=>{voxV=voxPick()};voxV=voxPick()}}catch(e){}
-function vox(t,pri){
-  try{if(!window.speechSynthesis||me.mute||pageHidden)return;t=String(t).replace(/<[^>]+>/g,'').replace(/[…！!？?]+/g,m=>m[0]==='…'?'、':m[0]);if(!t||t===voxLast&&performance.now()-voxAt<4000)return;
-    const busy=speechSynthesis.speaking;if(busy&&!pri&&performance.now()-voxAt<2200)return;
-    if(busy)speechSynthesis.cancel();voxLast=t;voxAt=performance.now();
-    const u=new SpeechSynthesisUtterance(t);u.lang='ja-JP';if(!voxV)voxV=voxPick();if(voxV)u.voice=voxV;u.rate=1.18;u.pitch=1.35;u.volume=1;speechSynthesis.speak(u)}catch(e){}
-}
+function vox(){}
 function voxStop(){try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}}
 
 function throwCarrot(){
@@ -2786,13 +2780,13 @@ function drawRace(pos,snap){
   const real=pos.slice(),lead=Math.max(...real);
   const disp=real.map((d,i)=>ing[i]?(pre?d:lead-(lead-d)*1.5):d-16);
   // ===== 横から見たレース（左から右へ走る） =====
-  const PW=Math.min(92,Wd*0.24),LW=Wd-PW-4;
+  const PW=-4,LW=Wd;
   const lead0=Math.max(...pos),prog=Math.min(1,lead0/r.dist);
   if(!pre&&!view.goAt)view.goAt=view.prevCd>0?now:now-9999;
   const fevr=!pre&&prog>0.82&&!(snap.f&&snap.f.filter(Boolean).length>=2)?(prog-0.82)/0.18:0;const shk=fevr*1.6;
   const shx=shk?(Math.random()-.5)*shk*2:0,shy=shk?(Math.random()-.5)*shk*2:0;
   const night=r.time==='yoru',eve=r.time==='yu'||r.time==='yuu',wet=r.weather==='rain';
-  const skyH=Hd*0.13,stH=Hd*0.13,railY=skyH+stH,laneTop=railY+10,laneBot=Hd-26,laneH=(laneBot-laneTop)/6;
+  const skyH=Hd*0.17,stH=Hd*0.1,railY=skyH+stH,laneTop=railY+10,laneBot=Hd-26,laneH=(laneBot-laneTop)/6;
   // カメラ
   const ld=Math.max(...disp),tl=Math.min(...disp.filter((d,i)=>ing[i]||pre));
   const spread=Math.max(14,ld-tl+10),ppmT=pre?7:Math.max(1.3,Math.min(8,(LW*0.68)/spread));
@@ -2839,7 +2833,7 @@ function drawRace(pos,snap){
   const P=disp.map((d,i)=>{const x=ing[i]||!pre?X(d):X(0)-14;const bob=pre?0:Math.sin(now/90+i*1.7)*1.2;return {x,y:laneTop+(i+0.6)*laneH+bob+shy,dx:1,dy:0}});
   const T=view.tok=P.map(p=>({x:p.x,y:p.y}));
   T.forEach(t=>{t.x=Math.max(-30,Math.min(LW+30,t.x))});
-  view.sideS=Math.min(laneH*1.05,46);
+  view.sideS=Math.min(laneH*1.55,70);
   // 足音（パカラッ）
   {const running=!pre&&snap.f&&snap.f.some(v=>!v);if(running){const iv=snap.sl?560:300-Math.min(80,lead/r.dist*80);
     if(!view.hoofAt||now-view.hoofAt>iv){view.hoofAt=now;const a=ac();if(a&&!me.mute)[0,0.07,0.15].forEach((t,k)=>{const v=0.05+(k===2?0.03:0);noise(t,0.05,v*2,'lowpass',380+k*60);tone(90-k*8,t,0.06,'sine',v*2.2)})}}}
@@ -2930,29 +2924,27 @@ function drawRace(pos,snap){
     if(view.finAt){const k=(now-view.finAt)/450;if(k<1){c.fillStyle=`rgba(255,255,255,${0.75*(1-k)})`;c.fillRect(0,0,lw,Hd)}}
     // 観客のどよめき（終盤ほど大きく）
     if(!view.roarAt||now-view.roarAt>420){view.roarAt=now;const a=ac();if(a&&!view.finAt){const v=0.006+0.07*Math.pow(prog,3);noise(0,0.75,v,'bandpass',800,true);noise(0.05,0.7,v*0.7,'bandpass',1600,true)}}}
-  // ---- 残り距離（大きく） ----
-  if(!pre){const rem2=Math.max(0,Math.round(r.dist-lead)),fin=rem2<=0,lw=Wd-PW-4;
+  // ---- 展開図（上部） ----
+  {const rem2=Math.max(0,Math.round(r.dist-lead)),fin=rem2<=0;
     const col=fin?'#ffd54a':rem2<=200?'#ff5252':rem2<=400?'#ffab40':'#fff';
-    c.save();c.fillStyle='rgba(8,6,4,.62)';c.beginPath();c.roundRect(lw/2-78,8,156,48,14);c.fill();
-    c.fillStyle='rgba(255,255,255,.18)';c.fillRect(lw/2-66,46,132,4);c.fillStyle=col;c.fillRect(lw/2-66,46,132*Math.min(1,lead/r.dist),4);
-    c.textAlign='center';c.fillStyle='#e9d3b0';c.font='800 9px "M PLUS Rounded 1c",sans-serif';c.fillText(fin?'':rem2<=200?'ラスト200m':'残り',lw/2,19);
-    const pulse=rem2<=200&&!fin?1+0.06*Math.sin(now/90):1;c.translate(lw/2,42);c.scale(pulse,pulse);
-    c.fillStyle=col;c.font='22px "Dela Gothic One","M PLUS Rounded 1c",sans-serif';c.fillText(fin?'GOAL':rem2+'m',0,0);c.restore()}
-  // ---- 右の順位表 ----
-  const x0=Wd-PW;
-  c.fillStyle='rgba(12,8,4,.82)';c.beginPath();c.roundRect(x0,6,PW-4,Hd-12,12);c.fill();
-  const rem=Math.max(0,Math.round(r.dist-lead));
-  c.fillStyle='#ffd54a';c.font='800 10px "M PLUS Rounded 1c",sans-serif';c.textAlign='center';c.fillText(pre?'出走前':rem>0?`残り ${rem}m`:'ゴール！',x0+(PW-4)/2,22);
-  c.fillStyle='rgba(255,255,255,.15)';c.fillRect(x0+8,28,PW-20,4);c.fillStyle='#ffd54a';c.fillRect(x0+8,28,(PW-20)*Math.min(1,lead/r.dist),4);
-  const rowH=Math.min(46,(Hd-50)/6);
-  ord.forEach((i,k)=>{const y=42+k*rowH,f=FRAME[i],mine=view.mine.has(i+1);
-    if(mine){c.fillStyle='rgba(255,213,74,.22)';c.beginPath();c.roundRect(x0+3,y-2,PW-10,rowH-4,8);c.fill()}
-    c.fillStyle=k===0?'#ffd54a':'#fff';c.font='900 13px "M PLUS Rounded 1c",sans-serif';c.textAlign='left';c.fillText(k+1,x0+8,y+16);
-    c.fillStyle=f.bg;c.strokeStyle=f.bg==='#ffffff'?'#555':'#fff';c.lineWidth=1.5;c.beginPath();c.arc(x0+32,y+11,9,0,7);c.fill();c.stroke();
-    c.fillStyle=f.fg;c.font='900 11px "M PLUS Rounded 1c",sans-serif';c.textAlign='center';c.fillText(i+1,x0+32,y+15);
-    c.fillStyle='#fff';c.font='800 10px "M PLUS Rounded 1c",sans-serif';c.textAlign='left';const nm=race.horses[i].name;c.fillText(nm.length>5?nm.slice(0,5):nm,x0+45,y+11);
-    const gap=k===0?'':((real[ord[0]]-real[i])/2.4);c.fillStyle='#bfa98a';c.font='800 9px "M PLUS Rounded 1c",sans-serif';c.fillText(k===0?'先頭':(gap<0.3?'ハナ差':gap>30?'大差':`${gap.toFixed(1)}馬身`),x0+45,y+24);
-  });
+    const bx=10,bw=Wd-20,by=6,bh=54,tx0=bx+64,tx1=bx+bw-22,ty=by+bh-16;
+    c.save();c.fillStyle='rgba(8,6,4,.66)';c.beginPath();c.roundRect(bx,by,bw,bh,12);c.fill();
+    c.textAlign='center';c.fillStyle='#e9d3b0';c.font='800 9px "M PLUS Rounded 1c",sans-serif';c.fillText(pre?'出走前':fin?'':rem2<=200?'ラスト200m':'残り',bx+32,by+17);
+    const pulse=rem2<=200&&!fin&&!pre?1+0.06*Math.sin(now/90):1;c.save();c.translate(bx+32,by+39);c.scale(pulse,pulse);c.fillStyle=col;c.font='17px "Dela Gothic One","M PLUS Rounded 1c",sans-serif';c.fillText(fin?'GOAL':(pre?r.dist:rem2)+'m',0,0);c.restore();
+    // コース線
+    c.fillStyle='rgba(255,255,255,.22)';c.fillRect(tx0,ty-2,tx1-tx0,4);
+    c.fillStyle=col;c.fillRect(tx0,ty-2,(tx1-tx0)*Math.min(1,lead/r.dist),4);
+    for(let m=200;m<r.dist;m+=200){const x=tx0+(tx1-tx0)*(m/r.dist);c.fillStyle='rgba(255,255,255,.35)';c.fillRect(x-0.5,ty-5,1,10)}
+    // ゴール旗
+    for(let k=0;k<4;k++)for(let j=0;j<2;j++){c.fillStyle=(k+j)%2?'#222':'#fff';c.fillRect(tx1+4+j*4,ty-14+k*4,4,4)}c.fillStyle='#fff';c.fillRect(tx1+3,ty-14,1.5,20);
+    // 馬マーカー（重なったら段をずらす）
+    const ms=[0,1,2,3,4,5].map(i=>({i,x:tx0+(tx1-tx0)*Math.min(1,Math.max(0,real[i]/r.dist))})).sort((a,b)=>b.x-a.x);
+    let lastX=1e9,lv=0;ms.forEach(m=>{lv=lastX-m.x<15?(lv+1)%3:0;lastX=m.x;m.y=ty-11-lv*10});
+    ms.slice().reverse().forEach(m=>{const f=FRAME[m.i],mine=view.mine.has(m.i+1);
+      if(mine){c.fillStyle='#ffd54a';c.beginPath();c.arc(m.x,m.y,10,0,7);c.fill()}
+      c.fillStyle=f.bg;c.strokeStyle=f.bg==='#ffffff'?'#555':'#fff';c.lineWidth=1.5;c.beginPath();c.arc(m.x,m.y,7.5,0,7);c.fill();c.stroke();
+      c.fillStyle=f.fg;c.font='900 9px "M PLUS Rounded 1c",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText(m.i+1,m.x,m.y+0.5);c.textBaseline='alphabetic'});
+    c.restore()}
   // 当たりそうな馬券の更新
   if(!view.odAt||now-view.odAt>250){view.odAt=now;const t0=ord[0]+1,t1=ord[1]+1,qk=pkey(t0,t1),ek=t0+'_'+t1;
     document.querySelectorAll('.mbr').forEach(el=>{const k=el.dataset.k,t=k[0],v=k.slice(1);el.classList.toggle('hot',!pre&&(t==='w'?+v===t0:t==='q'?v===qk:v===ek))})}
