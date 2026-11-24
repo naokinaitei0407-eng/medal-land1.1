@@ -1492,7 +1492,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24i';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24j';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1888,7 +1888,7 @@ function hostApplyCarrot(no,who,q){
   eng.carrots.push({no,t:0,who,q:Math.max(0.1,Math.min(1,+q||0.3))});
 }
 
-function durK(d){const P=[[1000,0.76],[1200,0.78],[1600,0.93],[2000,1],[2400,1],[3000,1.1],[3600,1.16]];if(d<=P[0][0])return P[0][1];for(let k=1;k<P.length;k++)if(d<=P[k][0]){const [a,ya]=P[k-1],[b,yb]=P[k];return ya+(yb-ya)*(d-a)/(b-a)}return P[P.length-1][1]}
+function durK(d){if(d===1200)return 0.52;const P=[[1000,0.76],[1200,0.78],[1600,0.93],[2000,1],[2400,1],[3000,1.1],[3600,1.16]];if(d<=P[0][0])return P[0][1];for(let k=1;k<P.length;k++)if(d<=P[k][0]){const [a,ya]=P[k-1],[b,yb]=P[k];return ya+(yb-ya)*(d-a)/(b-a)}return P[P.length-1][1]}
 function hostLoop(ts){
   if(!eng||phase!=='race'||role===null)return;
   const dt=eng.last?Math.min(0.05,(ts-eng.last)/1000):0;eng.last=ts;
@@ -2115,10 +2115,10 @@ function renderBet(){
   app.innerHTML=`<button class="bk-home" onclick="exitGame()"><i></i>ホームにもどる</button><div id="betfit">${raceInfo(true)}
   ${rivalCardHTML()}
   ${predHTML()}
-  <div class="modes"><button class="action" onclick="setMode((mode+1)%3)">ACTION</button><div class="mtabs" id="mtabs"></div></div>
+  <div class="modes"><button class="action" onclick="setMode(mode===0?2:0)">ACTION</button><div class="mtabs" id="mtabs"></div></div>
   <div class="board" id="board"></div><div id="frbox"></div></div>
-  <div class="sec" style="color:#fff">過去のレース結果</div>
-  ${historyHTML()}
+  <div class="sec" style="color:#fff">出走馬の紹介</div>
+  ${race.horses.map(horseCard).join('')}
   ${role!=='client'?`<button class="link" onclick="remain=Math.min(remain,0.1)">BETを締め切ってスタート ▶</button>`:''}
   <div style="height:150px"></div>
   <div class="dock"><div class="dock-in">
@@ -2215,7 +2215,7 @@ function coinStack(a){const n=Math.min(4,1+Math.floor(a/10));let h='';for(let i=
 function setMode(m){mode=m;renderModes();renderBoard();betFit()}
 function renderModes(){
   const el=document.getElementById('mtabs');if(!el)return;
-  el.innerHTML=MODES.map((m,i)=>`<button class="mtab m${i} ${mode===i?'on':''}" onclick="setMode(${i})">${m.n}<small>${m.d}</small></button>`).join('');
+  el.innerHTML=MODES.map((m,i)=>i===1?'':`<button class="mtab m${i} ${mode===i?'on':''}" onclick="setMode(${i})">${m.n}<small>${m.d}</small></button>`).join('');
 }
 const HH=no=>race.horses[no-1];
 const MUTTER=['お腹減った','チャーシュー12倍','家に帰りたい','眠い…','にんじん食べたい','今日の夕飯なに？','足つりそう…','前の馬のお尻しか見えない','実家に帰らせていただきます','推しのライブ行きたい','宿題やってない','ラーメン大盛りで','有給とりたい','風が気持ちいい〜','誰か応援して！','もう走れない…','靴ひもほどけた','あ、UFO','ここどこ？','今日はやる気ない','ゴールってどっち？','おやつの時間だ','まだ半分！？','背中がかゆい','明日から本気出す'];
@@ -2615,7 +2615,7 @@ function derbyTut(){
     {h:'あつまれダービーへようこそ',t:'6頭の馬のレースで<b>どの馬が勝つか予想して</b>メダルを賭けるゲームです。実際の画面で順番に説明します。',say:'あつまれダービーへようこそ！'},
     {sel:'#timer',h:'BET締切までの時間',t:'<b>30秒</b>以内に賭けてね。0になるとレースがスタートします。'},
     {sel:'.pred',h:'展開予想図',t:'序盤の隊列の予想です。左ほど前を走りそうな馬。天気によって予想が外れやすくなります。'},
-    {sel:'.modes',h:'賭け方を切り替える',t:'<b>単勝・馬連</b>：1着の馬／1-2着の組み合わせ<br><b>軸馬</b>：1頭を軸に6か所へ一気に<br><b>馬単</b>：1着→2着を順番どおり（高配当）'},
+    {sel:'.modes',h:'賭け方を切り替える',t:'<b>単勝・馬連</b>：1着の馬／1-2着の組み合わせ<br><b>馬単</b>：1着→2着を順番どおり（高配当）'},
     {sel:'#board>*:first-child',h:'オッズ表（ここに賭ける）',t:'マスの数字が<b>倍率</b>。マスを<b>タップで1回BET</b>、<b>長押しで連続BET</b>。当たれば 賭けた枚数×倍率 のメダルがもらえます。'},
     {sel:'.dk-chips',h:'1回に賭ける枚数',t:'タップ1回で賭ける枚数を <b>1・5・10枚</b> から選べます。'},
     {sel:'.dk-btn.undo',h:'取消',t:'タップで1つ前に戻す、<b>長押しで全部取消</b>。'},
@@ -2840,7 +2840,7 @@ function drawRace(pos,snap){
   const P=disp.map((d,i)=>{const x=ing[i]||!pre?X(d):X(0)-14;const bob=pre?0:Math.sin(now/90+i*1.7)*1.2;return {x,y:laneTop+(i+0.6)*laneH+bob+shy,dx:1,dy:0}});
   const T=view.tok=P.map(p=>({x:p.x,y:p.y}));
   T.forEach(t=>{t.x=Math.max(-120,Math.min(LW+60,t.x))});
-  view.sideS=Math.min(laneH*1.55,70);
+  view.sideS=Math.min(laneH*1.8,84);
   // 足音（パカラッ）
   {const running=!pre&&snap.f&&snap.f.some(v=>!v);if(running){const iv=snap.sl?560:300-Math.min(80,lead/r.dist*80);
     if(!view.hoofAt||now-view.hoofAt>iv){view.hoofAt=now;const a=ac();if(a&&!me.mute)[0,0.07,0.15].forEach((t,k)=>{const v=0.05+(k===2?0.03:0);noise(t,0.05,v*2,'lowpass',380+k*60);tone(90-k*8,t,0.06,'sine',v*2.2)})}}}
