@@ -1358,7 +1358,7 @@ function rankSchedule(){clearTimeout(rankTimer);rankTimer=setTimeout(rankPush,40
 function sbRankOn(){return !!(SB_URL&&SB_KEY)}
 function rankUid(){if(dbNs&&myUid)return myUid;if(!me.ruid){me.ruid='p_'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);saveMe()}return me.ruid}
 function rankReady(){return !!(dbNs&&myUid)||sbRankOn()}
-async function sbRank(path,opt){const r=await fetch(SB_URL.replace(/\/$/,'')+'/rest/v1/'+path,Object.assign({},opt||{},{headers:Object.assign({apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},(opt&&opt.headers)||{})}));if(!r.ok)throw new Error('sb '+r.status);return r.status===204?null:r.json().catch(()=>null)}
+async function sbRank(path,opt){const r=await fetch(SB_URL.replace(/\/$/,'')+'/rest/v1/'+path,Object.assign({},opt||{},{headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},/^sb_/.test(SB_KEY)?{}:{Authorization:'Bearer '+SB_KEY},(opt&&opt.headers)||{})}));if(!r.ok)throw new Error('sb '+r.status);return r.status===204?null:r.json().catch(()=>null)}
 async function rankList(f){
   if(dbNs&&myUid){const snap=await dbNs.collection('rank').orderBy(f,'desc').limit(100).get();return snap.docs.map(d=>({id:d.id,...d.data()}))}
   const L=await sbRank('mland_rank?select=uid,n,a,b,w,t&order='+f+'.desc&limit=100');return (L||[]).map(x=>({id:x.uid,n:x.n,a:x.a,b:x.b,w:x.w,t:x.t}))}
@@ -1517,7 +1517,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24p';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24q';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1554,7 +1554,7 @@ function p2pJoin(name){
     leave(){alive=false;try{send({t:'bye'})}catch(e){}setTimeout(()=>{try{peer&&peer.destroy()}catch(e){}},200);return Promise.resolve()}};
 }
 // ===== Supabase Realtime 部屋（サーバー中継で確実につながる） =====
-const SB_URL='',SB_KEY='';
+const SB_URL='https://snbubohngkduknyyibxv.supabase.co',SB_KEY='sb_publishable_2pB3I8E-DwLwtWP6difdxw_zz8PIZ64';
 function loadSupa(){if(window.supabase&&window.supabase.createClient)return Promise.resolve();return new Promise((ok,ng)=>{const srcs=['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2','https://unpkg.com/@supabase/supabase-js@2'];let i=0;const nx=()=>{if(i>=srcs.length)return ng(new Error('supa'));const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.supabase&&window.supabase.createClient?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function supaRoomNs(){return {join:async name=>{await loadSupa();return supaJoin(name)}}}
 function supaJoin(name){
