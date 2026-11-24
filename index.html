@@ -1354,7 +1354,16 @@ function bigWinCheck(n){if(me.rankOn||n<500||document.querySelector('.rkreg'))re
   m.querySelector('#rkrok').onclick=()=>{me.rankOn=true;saveMe();rankLast='';rankPush();m.remove();SFX.fanfare&&SFX.fanfare();toast(`${me.nick} でランキングに登録しました`)};
   m.querySelector('#rkrno').onclick=()=>m.remove()}
 function rankSchedule(){clearTimeout(rankTimer);rankTimer=setTimeout(rankPush,4000)}
-async function rankPush(){if(!dbNs||!myUid||rankBusy||rankRO||!me.nick||!me.rankOn)return;const body={n:String(me.nick).slice(0,8),a:rankVal(),b:me.best||0,w:me.totalWon||0,t:Date.now()};const key=body.n+'|'+body.a+'|'+body.b+'|'+body.w;if(key===rankLast)return;rankBusy=true;try{await dbNs.doc('rank/'+myUid).set(body);rankLast=key}catch(e){if(e&&e.code==='invalid_argument')rankRO=true}rankBusy=false}
+// ランキングの保存先：claude.ai上ではArtifactのDB、それ以外（GitHub Pagesなど）ではSupabase
+function sbRankOn(){return !!(SB_URL&&SB_KEY)}
+function rankUid(){if(dbNs&&myUid)return myUid;if(!me.ruid){me.ruid='p_'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);saveMe()}return me.ruid}
+function rankReady(){return !!(dbNs&&myUid)||sbRankOn()}
+async function sbRank(path,opt){const r=await fetch(SB_URL.replace(/\/$/,'')+'/rest/v1/'+path,Object.assign({},opt||{},{headers:Object.assign({apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'},(opt&&opt.headers)||{})}));if(!r.ok)throw new Error('sb '+r.status);return r.status===204?null:r.json().catch(()=>null)}
+async function rankList(f){
+  if(dbNs&&myUid){const snap=await dbNs.collection('rank').orderBy(f,'desc').limit(100).get();return snap.docs.map(d=>({id:d.id,...d.data()}))}
+  const L=await sbRank('mland_rank?select=uid,n,a,b,w,t&order='+f+'.desc&limit=100');return (L||[]).map(x=>({id:x.uid,n:x.n,a:x.a,b:x.b,w:x.w,t:x.t}))}
+async function rankPush(){if(!rankReady()||rankBusy||rankRO||!me.nick||!me.rankOn)return;const body={n:String(me.nick).slice(0,8),a:rankVal(),b:me.best||0,w:me.totalWon||0,t:Date.now()};const key=body.n+'|'+body.a+'|'+body.b+'|'+body.w;if(key===rankLast)return;rankBusy=true;
+  try{if(dbNs&&myUid)await dbNs.doc('rank/'+myUid).set(body);else await sbRank('mland_rank?on_conflict=uid',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(Object.assign({uid:rankUid()},body))});rankLast=key}catch(e){if(e&&e.code==='invalid_argument')rankRO=true}rankBusy=false}
 function cleanNick(s){return String(s||'').replace(/[\u0000-\u001f\u007f​-‏‪-‮⁠-⁯﻿]/g,'').trim().slice(0,8)}
 
 // ================= 馬・レースの生成（ホスト） =================
@@ -1508,7 +1517,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24o';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24p';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -3403,7 +3412,7 @@ function showRanking(tab){
   const m=document.createElement('div');m.className='modal';m.onclick=e=>{if(e.target===m)m.remove()};
   m.innerHTML=`<div class="sheet zsheet rksheet"><h2>ランキング</h2>
     <div class="rk-tabs"><button data-t="wa">所持メダル</button><button data-t="ww">最大獲得</button></div>
-    <div class="rk-body" id="rkb"></div><a class="rk-notion" href="${NOTION_RANK}" target="_blank" rel="noopener">Notionで全体ランキングを見る</a><button class="big green" id="rkc">とじる</button></div>`;
+    <div class="rk-body" id="rkb"></div><button class="big green" id="rkc">とじる</button></div>`;
   document.body.appendChild(m);m.querySelector('#rkc').onclick=()=>m.remove();
   const body=m.querySelector('#rkb');
   const row=(i,n,v,mine,tag)=>{v=+v||0;return `<div class="rk-row ${mine?'me':''}"><span class="rk-n">${i<3&&i>=0?`<i class="rk${i+1}">${i+1}</i>`:i<0?'-':i+1}</span><span class="rk-nm">${esc(n)}${mine?'<em>あなた</em>':tag||''}</span><b class="${v<0?'rk-neg':'rk-pos'}">${v<0?'△'+Math.abs(v).toLocaleString():'+'+v.toLocaleString()}</b></div>`};
@@ -3412,13 +3421,13 @@ function showRanking(tab){
       body.innerHTML=`<div class="rk-sub">累計獲得メダル（部屋のフレンドとCPU）</div>${L.map((x,i)=>row(i,x.n,x.v,x.me,x.fr?'<em class="f">フレンド</em>':x.me?'':'<em class="c">CPU</em>')).join('')}
        <div class="zk-h">ライバル戦績</div>${RIVALS.map(rv=>{const st=me.rv[rv.id]||{w:0,l:0};return `<div class="rk-row"><span class="rk-nm">${rv.n}<em class="c">${rv.d}</em></span><b>${st.w}勝 ${st.l}敗</b></div>`}).join('')}`;return}
     const f=t==='wa'?'a':'b',mv=t==='wa'?rankVal():(me.best||0);
-    const db=dbNs;
-    if(!db){body.innerHTML=`<div class="rk-sub">ランキングは、サインインしてこのページを開いたときに使えます</div>${row(-1,me.nick||'あなた',mv,1)}`;return}
+    if(!rankReady()){body.innerHTML=`<div class="rk-sub">ランキングサーバーを準備中です。もうしばらくお待ちください</div>${row(-1,me.nick||'あなた',mv,1)}`;return}
+    const myId=rankUid();
     body.innerHTML='<div class="rk-sub">読み込み中…</div>';let to=setTimeout(()=>{body.innerHTML='<div class="rk-sub">ランキングに接続できませんでした。あとでもう一度開いてください</div>'},10000);
-    try{await rankPush();const snap=await db.collection('rank').orderBy(f,'desc').limit(100).get();clearTimeout(to);
-      const L=snap.docs.map(d=>({id:d.id,...d.data()}));let mi=L.findIndex(x=>x.id===myUid);
+    try{await rankPush();const L=await rankList(f);clearTimeout(to);
+      let mi=L.findIndex(x=>x.id===myId);
       body.innerHTML=`${me.rankOn?'':'<div class="rk-sub" style="color:#ffd54a">ダービーか野球で1度に500枚以上獲得すると、ランキングに登録できます</div>'}<div class="rk-sub">${t==='wa'?'所持メダル（借金がある人は△借金額）':'1回でもらった最大のメダル'}　参加 ${L.length}人</div>
-        ${L.length?L.map((x,i)=>row(i,x.n||'名無し',x[f],x.id===myUid)).join(''):'<div class="rk-sub">まだ誰も登録されていません</div>'}
+        ${L.length?L.map((x,i)=>row(i,x.n||'名無し',x[f],x.id===myId)).join(''):'<div class="rk-sub">まだ誰も登録されていません</div>'}
         ${mi<0?`<div class="zk-h">あなた</div>${row(-1,me.nick||'あなた',mv,1)}<div class="rk-sub">${!me.rankOn?'まだ登録されていません':rankRO?'この共有方法では記録を登録できません（見るだけ）':'記録は数秒後に反映されます'}</div>`:''}`}
     catch(e){clearTimeout(to);body.innerHTML='<div class="rk-sub">ランキングを読み込めませんでした</div>'}};
   m.querySelectorAll('.rk-tabs button').forEach(b=>b.onclick=()=>show(b.dataset.t));show(tab);
