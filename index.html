@@ -1483,7 +1483,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24d';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24e';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -2785,7 +2785,7 @@ function drawRace(pos,snap){
   // 表示用の距離（差を2.2倍に広げて見やすく）
   const real=pos.slice(),lead=Math.max(...real);
   const disp=real.map((d,i)=>ing[i]?(pre?d:lead-(lead-d)*1.5):d-16);
-  // ===== 横から見たレース（右から左へ走る） =====
+  // ===== 横から見たレース（左から右へ走る） =====
   const PW=Math.min(92,Wd*0.24),LW=Wd-PW-4;
   const lead0=Math.max(...pos),prog=Math.min(1,lead0/r.dist);
   if(!pre&&!view.goAt)view.goAt=view.prevCd>0?now:now-9999;
@@ -2798,7 +2798,7 @@ function drawRace(pos,snap){
   const spread=Math.max(14,ld-tl+10),ppmT=pre?7:Math.max(1.3,Math.min(8,(LW*0.68)/spread));
   const cam=view.scam||(view.scam={d:0,p:7});
   const camT=pre?2:ld;if(pre||Math.abs(camT-cam.d)>60)cam.d=camT;else cam.d+=(camT-cam.d)*0.5;cam.p+=(ppmT-cam.p)*0.06;
-  const anchor=pre?LW*0.42:LW*0.26;const X=d=>anchor+(cam.d-d)*cam.p+shx;
+  const anchor=pre?LW*0.58:LW*0.72;const X=d=>anchor+(d-cam.d)*cam.p+shx;
   c.setTransform(dpr,0,0,dpr,0,0);
   // 空
   let g=c.createLinearGradient(0,0,0,railY);
@@ -2806,7 +2806,7 @@ function drawRace(pos,snap){
   c.fillStyle=g;c.fillRect(0,0,LW,railY);
   if(night){for(let i=0;i<4;i++){const lx=((i*110-cam.d*cam.p*0.15)%(LW+110)+LW+110)%(LW+110)-30;c.fillStyle='#fffde7';c.fillRect(lx-9,4,18,4);c.fillStyle='rgba(255,253,231,.08)';c.beginPath();c.moveTo(lx-9,8);c.lineTo(lx+9,8);c.lineTo(lx+40,Hd);c.lineTo(lx-40,Hd);c.fill()}}
   // スタンド（奥・ゆっくり流れる）
-  const so=(cam.d*cam.p*0.35)%24;
+  const so=24-(cam.d*cam.p*0.35)%24;
   c.fillStyle=night?'#2a3140':'#9aa3ad';c.fillRect(0,skyH,LW,stH);c.fillStyle=night?'#1c2230':'#7a838d';c.fillRect(0,skyH,LW,5);
   for(let y=skyH+8;y<railY-3;y+=6)for(let x=-24+so+((y/6|0)%2)*3;x<LW+24;x+=6){c.fillStyle=['#ffd54a','#ff7043','#eceff1','#4fc3f7','#81c784','#f48fb1'][((x*7+y*5)/6|0)%6&5];c.globalAlpha=.75;c.fillRect(x,y+Math.sin(now/120+x)*(prog>0.8?1.2:0.4),3,3)}c.globalAlpha=1;
   // 走路
@@ -2827,16 +2827,16 @@ function drawRace(pos,snap){
   view.finX=X(r.dist);view.finY=(laneTop+laneBot)/2;
   // スタートゲート
   {const ga=pre?1:Math.max(0,1-(now-(view.goAt||now))/2600),x=X(0);if(ga>0&&x>-60&&x<LW+60){c.globalAlpha=ga;const op=pre?0:Math.min(1,(now-(view.goAt||now))/180);
-    c.fillStyle='#5d6873';c.fillRect(x-2,railY-14,30,10);
-    for(let k=0;k<6;k++){const y=laneTop+k*laneH;c.fillStyle='rgba(70,80,92,.55)';c.fillRect(x,y+2,26,laneH-4);c.strokeStyle='#cfd6dc';c.lineWidth=2;c.strokeRect(x,y+2,26,laneH-4);
-      c.save();c.translate(x,y+2);c.rotate(-op*1.3);c.fillStyle='#e53935';c.fillRect(-2,0,3,laneH-4);c.restore();
-      const f=FRAME[k];c.fillStyle=f.bg;c.fillRect(x+22,y+3,6,10);c.fillStyle=f.fg;c.font='900 8px sans-serif';c.textAlign='center';c.fillText(k+1,x+25,y+11)}
+    c.fillStyle='#5d6873';c.fillRect(x-28,railY-14,30,10);
+    for(let k=0;k<6;k++){const y=laneTop+k*laneH;c.fillStyle='rgba(70,80,92,.55)';c.fillRect(x-26,y+2,26,laneH-4);c.strokeStyle='#cfd6dc';c.lineWidth=2;c.strokeRect(x-26,y+2,26,laneH-4);
+      c.save();c.translate(x,y+2);c.rotate(op*1.3);c.fillStyle='#e53935';c.fillRect(-1,0,3,laneH-4);c.restore();
+      const f=FRAME[k];c.fillStyle=f.bg;c.fillRect(x-28,y+3,6,10);c.fillStyle=f.fg;c.font='900 8px sans-serif';c.textAlign='center';c.fillText(k+1,x-25,y+11)}
     c.globalAlpha=1}}
   rail(laneBot+4);
   c.fillStyle=night?'#163a22':'#3f8f45';c.fillRect(0,laneBot+14,LW,Hd-laneBot-14);
   if(night){c.fillStyle='rgba(0,10,40,.25)';c.fillRect(0,0,LW,Hd)}
   // 馬の位置
-  const P=disp.map((d,i)=>{const x=ing[i]||!pre?X(d):X(0)+40+i*4;const bob=pre?0:Math.sin(now/90+i*1.7)*1.2;return {x,y:laneTop+(i+0.6)*laneH+bob+shy,dx:-1,dy:0}});
+  const P=disp.map((d,i)=>{const x=ing[i]||!pre?X(d):X(0)-14;const bob=pre?0:Math.sin(now/90+i*1.7)*1.2;return {x,y:laneTop+(i+0.6)*laneH+bob+shy,dx:1,dy:0}});
   const T=view.tok=P.map(p=>({x:p.x,y:p.y}));
   T.forEach(t=>{t.x=Math.max(-30,Math.min(LW+30,t.x))});
   view.sideS=Math.min(laneH*1.05,46);
@@ -2874,7 +2874,7 @@ function drawRace(pos,snap){
     if(!view.face)view.face=[1,1,1,1,1,1];if(p.dx>0.25)view.face[i]=1;else if(p.dx<-0.25)view.face[i]=-1;
     const S=view.sideS||30,mine=view.mine.has(i+1);
     c.fillStyle='rgba(0,0,0,.18)';c.beginPath();c.ellipse(t.x,t.y+S*0.32,S*0.5,S*0.09,0,0,7);c.fill();
-    drawHorse(c,t.x,t.y+S*0.3,S,{type:h.type,coat:coatOf(h),no:i+1,ph:now/1000*(run?11:0)+i*1.7,run,alpha:ing[i]||pre?1:0.45,flip:true});
+    drawHorse(c,t.x,t.y+S*0.3,S,{type:h.type,coat:coatOf(h),no:i+1,ph:now/1000*(run?11:0)+i*1.7,run,alpha:ing[i]||pre?1:0.45,flip:false});
     const f=FRAME[i],by=t.y-S*0.66;c.globalAlpha=ing[i]?1:0.45;
     if(mine){c.fillStyle='#ffe14d';c.beginPath();c.arc(t.x,by,10.5,0,7);c.fill()}
     c.fillStyle=f.bg;c.strokeStyle=f.bg==='#ffffff'?'#555':'#fff';c.lineWidth=1.6;c.beginPath();c.arc(t.x,by,7.8,0,7);c.fill();c.stroke();
