@@ -1506,7 +1506,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24l';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24m';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1573,7 +1573,7 @@ function supaJoin(name){
 async function initNet(){
   try{
     const [rm,us,dbn]=await Promise.all([window.claude&&claude.use?claude.use('room'):null,window.claude&&claude.use?claude.use('user'):null,window.claude&&claude.use?claude.use('db').catch(()=>null):null]);
-    room=rm;userNs=us;dbNs=dbn;try{myUid=us?await us.id():null}catch(e){myUid=null}rankSchedule();
+    room=rm;userNs=us;dbNs=dbn;try{myUid=us?await us.id():null}catch(e){myUid=null}if(dbNs&&myUid&&!me.rankOn&&!me.rankCleared){try{const dr=dbNs.doc('rank/'+myUid);if(dr&&dr.delete)await dr.delete();me.rankCleared=1;saveMe()}catch(e){}}rankSchedule();
     canHost=!!(us&&await us.canEdit());
     if(!room){room=SB_URL&&SB_KEY?supaRoomNs():p2pRoomNs();canHost=true}
     online=!!room;
@@ -1653,7 +1653,7 @@ function renderTitle(){document.body.classList.remove('hrmode','betfit','hrsel',
     <div class="g-hd"><span class="g-tag">野球</span><b>ホームランバッター</b></div>
     <canvas id="hcv2" class="h-scene"></canvas>
     <div class="g-desc">長押しで構えて、離して打つ。流れるチャンスの的に当ててルーレットでホームランを狙え。強い敵ほど勝利メダルが大きい。</div>
-    <div class="g-jp">ジャックポット <b>${me.jpV2&&me.jp>=1000?Math.floor(me.jp):'1000〜10000'}</b>枚</div>
+    <div class="g-jp">ジャックポット <b>？？？？</b>枚</div>
     <button class="hbtn gold" onclick="hrTut(startHomerun)">あそぶ</button>
   </div>
   <div class="h-note">ゲーム内メダルで遊ぶゲームです。財布はすべてのゲームで共通です</div>`;
@@ -3553,7 +3553,7 @@ const HR_EN=[
 function startHomerun(){
   if(!readNick())return;
   document.body.classList.remove('home');phase='hrsel';role='hr';hrLoadSnd();
-  if(!(me.jp>=1000)||!me.jpV2){me.jp=jpRoll();me.jpV2=1;saveMe()}renderHRSelect();
+  renderHRSelect();
 }
 const HRSV='mland-hr-save';
 function hrSave(){if(!HR||!HR.en||HR.state==='end')return;const k=['outs','strikes','inn','side','bases','eb','my','op','half','mBet','mP','bonus','bonusKind','awake','cons','total'];const o={ei:HR_EN.indexOf(HR.en)};k.forEach(x=>o[x]=HR[x]);o.bonusKind=o.bonusKind||'';lsSet(HRSV,o)}
@@ -3889,7 +3889,7 @@ function hrRoulette(){
   else if(rr<0.9){creep=true;target=main=(j+(Math.random()<0.5?1:N-1))%N;cdir=target===(j+1)%N?1:-1}
   else{do{target=Math.floor(Math.random()*N)}while(target===0||target===6);main=target}
   const d=document.createElement('div');d.className='hr-roul';
-  d.innerHTML=`<div class="rl-vig"></div><div class="rl-cap">JACKPOT CHANCE</div><div class="rl-jp">JACKPOT <b>${Math.floor(me.jp)}</b>枚</div><div class="rl-stage"><canvas width="600" height="600"></canvas></div><div class="rl-say"></div><div class="rl-res"></div><div class="rl-flash"></div>`;
+  d.innerHTML=`<div class="rl-vig"></div><div class="rl-cap">JACKPOT CHANCE</div><div class="rl-jp">JACKPOT <b>？？？？</b>枚</div><div class="rl-stage"><canvas width="600" height="600"></canvas></div><div class="rl-say"></div><div class="rl-res"></div><div class="rl-flash"></div>`;
   wrap.appendChild(d);const cv=d.querySelector('canvas'),c=cv.getContext('2d'),say=d.querySelector('.rl-say'),stage=d.querySelector('.rl-stage');hrDrone(false);
   const T=5.4,ballEnd=-Math.PI/2,wheelEnd=ballEnd-(main+0.5)*segA;let t0=performance.now(),lastSeg=-1,phase2=null,done=false,nextBeat=0;
   const draw=(wa,ba,br,t)=>{c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,600,600);c.translate(300,300);
@@ -3904,7 +3904,7 @@ function hrRoulette(){
     c.strokeStyle='#ffd54a';c.lineWidth=3;c.beginPath();c.arc(0,0,214,0,7);c.stroke();
     c.fillStyle='#2a1200';c.beginPath();c.arc(0,0,118,0,7);c.fill();const hub=c.createRadialGradient(-24,-24,10,0,0,106);hub.addColorStop(0,'#fff8d6');hub.addColorStop(0.6,'#e0a82a');hub.addColorStop(1,'#8a5a00');c.fillStyle=hub;c.beginPath();c.arc(0,0,104,0,7);c.fill();
     c.save();c.rotate(wa*1.0);for(let i=0;i<8;i++){c.rotate(Math.PI/4);c.fillStyle='rgba(90,40,0,.35)';c.fillRect(30,-3,60,6)}c.restore();
-    c.fillStyle='#4a1800';c.font='400 26px "Reggae One",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('JACKPOT',0,-10);c.font='400 26px "DotGothic16",monospace';c.fillText(Math.floor(me.jp),0,24);
+    c.fillStyle='#4a1800';c.font='400 26px "Reggae One",sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('JACKPOT',0,-10);c.font='400 26px "DotGothic16",monospace';c.fillText('????',0,24);
     const bx=Math.cos(ba)*br,by=Math.sin(ba)*br;c.fillStyle='rgba(0,0,0,.4)';c.beginPath();c.arc(bx+3,by+4,14,0,7);c.fill();const bg=c.createRadialGradient(bx-5,by-5,2,bx,by,14);bg.addColorStop(0,'#fff');bg.addColorStop(1,'#b0bec5');c.fillStyle=bg;c.beginPath();c.arc(bx,by,14,0,7);c.fill();
     c.fillStyle='#ff1744';c.strokeStyle='#fff';c.lineWidth=3;c.beginPath();c.moveTo(0,-262);c.lineTo(-16,-292);c.lineTo(16,-292);c.closePath();c.fill();c.stroke()};
   let wa=0,ba=0,br=226;
@@ -3922,7 +3922,7 @@ function hrRoulette(){
       else if(!done){done=true;finish()}}
     draw(wa,ba,br,t);if(!done||t<20)requestAnimationFrame(f)})();
   const finish=()=>{const [kk,v]=HR_RL[target],r=d.querySelector('.rl-res');let pay=0;say.className='rl-say';d.classList.remove('shake');
-    if(kk==='JP'){pay=Math.floor(me.jp);me.jp=jpRoll();d.classList.add('win');d.querySelector('.rl-flash').classList.add('go');r.innerHTML=`<b>JACKPOT!!</b><span class="rl-num">0</span>`;r.className='rl-res jp show';
+    if(kk==='JP'){pay=jpRoll();{const jb=d.querySelector('.rl-jp b');if(jb)jb.textContent=pay}d.classList.add('win');d.querySelector('.rl-flash').classList.add('go');r.innerHTML=`<b>JACKPOT!!</b><span class="rl-num">0</span>`;r.className='rl-res jp show';
       hrFireworks();SFX.fanfare();setTimeout(()=>SFX.fanfare(),700);setTimeout(()=>SFX.fanfare(),1400);
       const nm=r.querySelector('.rl-num'),s0=performance.now();(function cnt(){const k=Math.min(1,(performance.now()-s0)/1800);nm.textContent='+'+Math.floor(pay*k)+'枚';if(k<1)requestAnimationFrame(cnt);else tone(1568,0,0.4,'sine',0.12)})();
       for(let i=0;i<40;i++){const co=document.createElement('i');co.className='rl-coin';co.style.left=Math.random()*100+'%';co.style.animationDelay=(Math.random()*1.2)+'s';d.appendChild(co)}}
@@ -4071,7 +4071,7 @@ function hrDraw(t){
    const bg=c.createLinearGradient(0,0,230,0);bg.addColorStop(0,ch?'#ff1744':'#c62828');bg.addColorStop(1,ch?'#ff8a00':'#e53935');c.fillStyle=bg;c.beginPath();c.moveTo(0,4);c.lineTo(222,4);c.lineTo(206,32);c.lineTo(0,32);c.fill();c.strokeStyle='#ffd54a';c.lineWidth=2;c.stroke();
    c.fillStyle='#fff';c.font='400 17px "Reggae One","Dela Gothic One",sans-serif';c.textAlign='left';c.lineWidth=4;c.strokeStyle='#5a0000';const bt=HR.awake>0&&!ch?`覚醒中　あと${HR.awake}球`:ch?'ホームランを打て!!':HR.side==='off'?`攻撃中　${HR.inn}回表`:`守備中　${HR.inn}回裏`;c.strokeText(bt,10,25);c.fillStyle=ch?`hsl(${50+Math.sin(t*12)*10},100%,${70+Math.sin(t*12)*15}%)`:'#fff';c.fillText(bt,10,25);
    const jg=c.createLinearGradient(0,2,0,34);jg.addColorStop(0,'#ffe57f');jg.addColorStop(1,'#ff9100');c.fillStyle=jg;c.beginPath();c.moveTo(232,2);c.lineTo(HRW-4,2);c.lineTo(HRW-4,34);c.lineTo(222,34);c.fill();c.strokeStyle='#7a2e00';c.lineWidth=2;c.stroke();
-   c.fillStyle='#7a2e00';c.font='900 8px sans-serif';c.textAlign='center';c.fillText('JACKPOT',HRW-62,12);c.font='400 18px "DotGothic16",monospace';c.fillStyle='#4a1400';c.fillText(Math.floor(me.jp),HRW-62,31);c.restore()}
+   c.fillStyle='#7a2e00';c.font='900 8px sans-serif';c.textAlign='center';c.fillText('JACKPOT',HRW-62,12);c.font='400 18px "DotGothic16",monospace';c.fillStyle='#4a1400';c.fillText('????',HRW-62,31);c.restore()}
   // 流れる枠
   const S=HR.strip;c.fillStyle='#0a0f1e';c.fillRect(0,HR_SY-6,HRW,HR_SH+12);
   for(let rep=-1;rep<=Math.ceil(HRW/S.L)+1;rep++)S.forEach(s=>{const x=s.x-(HR.off%S.L)+rep*S.L;if(x>HRW||x+s.w<0)return;const st=HR_ST[s.t];
