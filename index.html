@@ -1358,7 +1358,7 @@ function rankSchedule(){clearTimeout(rankTimer);rankTimer=setTimeout(rankPush,40
 function sbRankOn(){return !!(SB_URL&&SB_KEY)}
 function rankUid(){if(dbNs&&myUid)return myUid;if(!me.ruid){me.ruid='p_'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);saveMe()}return me.ruid}
 function rankReady(){return !!(dbNs&&myUid)||sbRankOn()}
-async function sbRank(path,opt){const r=await fetch(SB_URL.replace(/\/$/,'')+'/rest/v1/'+path,Object.assign({},opt||{},{headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},/^sb_/.test(SB_KEY)?{}:{Authorization:'Bearer '+SB_KEY},(opt&&opt.headers)||{})}));if(!r.ok)throw new Error('sb '+r.status);return r.status===204?null:r.json().catch(()=>null)}
+async function sbRank(path,opt){const r=await fetch(SB_URL.replace(/\/$/,'')+'/rest/v1/'+path,Object.assign({},opt||{},{headers:Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},/^sb_/.test(SB_KEY)?{}:{Authorization:'Bearer '+SB_KEY},(opt&&opt.headers)||{})}));if(!r.ok){let t='';try{t=await r.text()}catch(e){}throw new Error(r.status+' '+t.slice(0,160))}return r.status===204?null:r.json().catch(()=>null)}
 async function rankList(f){
   if(dbNs&&myUid){const snap=await dbNs.collection('rank').orderBy(f,'desc').limit(100).get();return snap.docs.map(d=>({id:d.id,...d.data()}))}
   const L=await sbRank('mland_rank?select=uid,n,a,b,w,t&order='+f+'.desc&limit=100');return (L||[]).map(x=>({id:x.uid,n:x.n,a:x.a,b:x.b,w:x.w,t:x.t}))}
@@ -1517,7 +1517,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24q';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24r';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -3429,7 +3429,7 @@ function showRanking(tab){
       body.innerHTML=`${me.rankOn?'':'<div class="rk-sub" style="color:#ffd54a">ダービーか野球で1度に500枚以上獲得すると、ランキングに登録できます</div>'}<div class="rk-sub">${t==='wa'?'所持メダル（借金がある人は△借金額）':'1回でもらった最大のメダル'}　参加 ${L.length}人</div>
         ${L.length?L.map((x,i)=>row(i,x.n||'名無し',x[f],x.id===myId)).join(''):'<div class="rk-sub">まだ誰も登録されていません</div>'}
         ${mi<0?`<div class="zk-h">あなた</div>${row(-1,me.nick||'あなた',mv,1)}<div class="rk-sub">${!me.rankOn?'まだ登録されていません':rankRO?'この共有方法では記録を登録できません（見るだけ）':'記録は数秒後に反映されます'}</div>`:''}`}
-    catch(e){clearTimeout(to);body.innerHTML='<div class="rk-sub">ランキングを読み込めませんでした</div>'}};
+    catch(e){clearTimeout(to);const msg=String(e&&e.message||e);const hint=/PGRST205|42P01|does not exist|Could not find the table/.test(msg)?'Supabaseにランキング用の表がまだありません（SQLを実行してください）':/401|403|apikey|JWT|permission/i.test(msg)?'Supabaseの鍵か読み取り許可の設定に問題があります':'ランキングを読み込めませんでした';body.innerHTML=`<div class="rk-sub">${hint}</div><div class="rk-sub" style="font-size:10px;opacity:.7;word-break:break-all">${esc(msg)}</div>`}};
   m.querySelectorAll('.rk-tabs button').forEach(b=>b.onclick=()=>show(b.dataset.t));show(tab);
 }
 
