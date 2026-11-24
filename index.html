@@ -168,6 +168,14 @@ canvas{width:100%;height:330px;display:block;border-radius:14px;box-shadow:0 4px
 .plus{color:#1d7a2c;font-size:20px}.zero{color:#aaa}
 .bigwin{font-size:13px;color:#fff;background:#e53935;border-radius:6px;padding:1px 6px;margin-left:4px}
 .next{display:flex;gap:8px;align-items:center}
+.gp{position:fixed;inset:0;z-index:86;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.gp-flash{position:absolute;inset:0;background:#fff;animation:gpf .45s forwards}
+@keyframes gpf{from{opacity:.95}to{opacity:0}}
+.gp-card{background:#fffdf6;padding:8px 8px 10px;border-radius:4px;box-shadow:0 14px 40px rgba(0,0,0,.55);transform:rotate(-4deg);animation:gpin .4s cubic-bezier(.2,1.4,.4,1) both;width:min(78vw,330px)}
+.gp-card img{display:block;width:100%;border-radius:2px;filter:contrast(1.08) saturate(1.1)}
+.gp-cap{text-align:center;font-weight:900;font-size:14px;color:#2b2118;margin-top:6px}.gp-cap b{color:#d32f2f;font-size:17px}
+.gp.out{animation:fadeout .4s forwards}
+@keyframes gpin{from{transform:rotate(-14deg) scale(1.6);opacity:0}}
 .tut{position:fixed;inset:0;z-index:400;touch-action:none}
 .tut-hole{position:absolute;border-radius:12px;box-shadow:0 0 0 9999px rgba(6,10,24,.8);border:3px solid #ffd54a;transition:all .28s;pointer-events:none;animation:tutp 1.2s infinite}
 @keyframes tutp{50%{border-color:#fff}}
@@ -1484,7 +1492,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.24h';
+const P2P_CFG={debug:0};const APP_VER='2026.11.24i';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1880,6 +1888,7 @@ function hostApplyCarrot(no,who,q){
   eng.carrots.push({no,t:0,who,q:Math.max(0.1,Math.min(1,+q||0.3))});
 }
 
+function durK(d){const P=[[1000,0.76],[1200,0.78],[1600,0.93],[2000,1],[2400,1],[3000,1.1],[3600,1.16]];if(d<=P[0][0])return P[0][1];for(let k=1;k<P.length;k++)if(d<=P[k][0]){const [a,ya]=P[k-1],[b,yb]=P[k];return ya+(yb-ya)*(d-a)/(b-a)}return P[P.length-1][1]}
 function hostLoop(ts){
   if(!eng||phase!=='race'||role===null)return;
   const dt=eng.last?Math.min(0.05,(ts-eng.last)/1000):0;eng.last=ts;
@@ -1898,7 +1907,7 @@ function hostLoop(ts){
       {const ld=Math.max(...eng.rs.map(x=>x.d))/r.dist;
        if(eng.sb){eng.sb.t-=dt;if(eng.sb.t<=0)eng.sb=null}
        if(!eng.sb&&eng.sbq.length&&ld>=eng.sbq[0]){eng.sbq.shift();const cs=eng.rs.filter(x=>!x.fin);if(cs.length)eng.sb={no:pick(cs).no,i:Math.floor(rnd()*MUTTER.length),t:2.4}}}
-      eng.acc+=dt*(r.dist/16.3)/18.75*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
+      eng.acc+=dt*(r.dist/16.3)/(18.75*durK(r.dist))*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
       while(eng.acc>=0.1){stepRunners(eng.rs,r,0.1,eng.t,hostEvent);eng.t+=0.1;eng.acc-=0.1}
       hostControl(dt);
       eng.rs.forEach(x=>{if(x.bump>0)x.bump-=dt});
@@ -2531,8 +2540,6 @@ function motiCut(no,idx){
   const tm=race.time,sky=tm==='yoru'?['#1a2450','#3b4f8a']:tm==='asa'?['#ffb88a','#ffe0b8']:['#5fb6ff','#cfeeff'];
   const f=()=>{if(!el.isConnected)return;const t=(performance.now()-t0)/1000;
     let g=c.createLinearGradient(0,0,0,420);g.addColorStop(0,sky[0]);g.addColorStop(1,sky[1]);c.fillStyle=g;c.fillRect(0,0,560,420);
-    // 集中線
-    c.save();c.translate(300,190);for(let k=0;k<36;k++){c.rotate(Math.PI*2/36);c.fillStyle=k%2?'rgba(255,255,255,.28)':'rgba(255,220,120,.18)';c.beginPath();c.moveTo(0,0);c.lineTo(500,-26);c.lineTo(500,26);c.closePath();c.fill()}c.restore();
     c.fillStyle='#6cc35a';c.fillRect(0,330,560,90);c.fillStyle='#fff';c.fillRect(0,318,560,6);for(let x=10;x<560;x+=40)c.fillRect(x,300,5,24);
     // ポーズ（前脚を上げて胸を張る）
     const rear=0.32+Math.sin(Math.min(1,t*3)*Math.PI/2)*0.1;
@@ -2833,7 +2840,7 @@ function drawRace(pos,snap){
   const P=disp.map((d,i)=>{const x=ing[i]||!pre?X(d):X(0)-14;const bob=pre?0:Math.sin(now/90+i*1.7)*1.2;return {x,y:laneTop+(i+0.6)*laneH+bob+shy,dx:1,dy:0}});
   const T=view.tok=P.map(p=>({x:p.x,y:p.y}));
   T.forEach(t=>{t.x=Math.max(-120,Math.min(LW+60,t.x))});
-  view.sideS=Math.min(laneH*2.15,104);
+  view.sideS=Math.min(laneH*1.55,70);
   // 足音（パカラッ）
   {const running=!pre&&snap.f&&snap.f.some(v=>!v);if(running){const iv=snap.sl?560:300-Math.min(80,lead/r.dist*80);
     if(!view.hoofAt||now-view.hoofAt>iv){view.hoofAt=now;const a=ac();if(a&&!me.mute)[0,0.07,0.15].forEach((t,k)=>{const v=0.05+(k===2?0.03:0);noise(t,0.05,v*2,'lowpass',380+k*60);tone(90-k*8,t,0.06,'sine',v*2.2)})}}}
@@ -2943,9 +2950,6 @@ function drawRace(pos,snap){
     const ten=Math.max(0,Math.min(1,(6.4-cd)/6.4));
     // 暗くなる周辺
     const vg=c.createRadialGradient(Wd/2,Hd*0.55,Math.min(Wd,Hd)*(0.5-0.25*ten),Wd/2,Hd*0.55,Math.max(Wd,Hd)*0.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,`rgba(0,0,0,${0.3+0.5*ten})`);c.fillStyle=vg;c.fillRect(0,0,Wd,Hd);
-    // 心音
-    if(nIn>=6&&cd>0.3){const iv=0.5+0.45*Math.min(1,cd/4.4);if(!view.hbAt||now-view.hbAt>iv*1000){view.hbAt=now;try{tone(58,0,0.12,'sine',0.55);tone(48,0.15,0.12,'sine',0.4)}catch(e){}}
-      const hk=Math.max(0,1-(now-view.hbAt)/260);if(hk>0){c.strokeStyle=`rgba(255,40,40,${0.45*hk*ten})`;c.lineWidth=14;c.strokeRect(0,0,Wd,Hd)}}
     // 見出し
     const msg=cd>6.4?'ファンファーレ':nIn<6?`ゲートイン中  ${nIn} / 6`:'体勢完了';
     c.save();c.textAlign='center';c.fillStyle='rgba(0,0,0,.6)';c.beginPath();c.roundRect(Wd/2-90,12,180,34,17);c.fill();
@@ -2956,6 +2960,15 @@ function drawRace(pos,snap){
       c.lineWidth=8;c.strokeStyle='rgba(0,0,0,.7)';c.font='64px "Dela Gothic One","M PLUS Rounded 1c",sans-serif';c.strokeText(n,0,0);c.fillStyle=n===1?'#ff5252':'#fff';c.fillText(n,0,0);c.restore()}
   }
   if(snap.sl){c.fillStyle='rgba(0,0,0,.18)';c.fillRect(0,0,Wd-PW-4,Hd);c.fillStyle='#fff';c.font='italic 900 12px "M PLUS Rounded 1c",sans-serif';c.textAlign='left';c.fillText('▶ SLOW',10,Hd-12)}
+  // 接戦ゴール直前の写真
+  if(!pre&&!view.gpShot){const so=real.slice().sort((a,b)=>b-a),gap=so[0]-so[1];
+    if(so[0]>=r.dist-5&&so[0]<=r.dist+3&&gap<3.2){view.gpShot=1;try{
+      const cv=c.canvas,sc=cv.width/Wd,ch=Math.min(Hd-(railY-34),Hd),cw=Math.min(Wd,ch*4/3),mx=(T[ord[0]].x+T[ord[1]].x)/2,fx=Math.max(0,Math.min(Wd-cw,mx-cw/2)),fy=Math.max(0,Hd-ch);
+      const oc=document.createElement('canvas');oc.width=480;oc.height=360;const ox=oc.getContext('2d');ox.drawImage(cv,fx*sc,fy*sc,cw*sc,ch*sc,0,0,480,360);
+      ox.fillStyle='rgba(255,240,200,.12)';ox.fillRect(0,0,400,300);
+      const el=document.createElement('div');el.className='gp';el.innerHTML=`<div class="gp-card"><img src="${oc.toDataURL('image/jpeg',0.85)}"><div class="gp-cap">ゴール直前！ <b>${ord[0]+1}</b> と <b>${ord[1]+1}</b> の大接戦</div></div><div class="gp-flash"></div>`;
+      document.body.appendChild(el);noise(0,0.03,0.4,'highpass',4000);noise(0.07,0.04,0.3,'highpass',2500);tone(1800,0.02,0.05,'sine',0.06);
+      setTimeout(()=>el.classList.add('out'),1900);setTimeout(()=>el.remove(),2300)}catch(e){}}}
   // ゴール前の写真を撮りためる
   {const gx=view.finX,gy=view.finY;const sd=real.slice().sort((a,b)=>b-a)[1],near=sd>r.dist-30&&sd<r.dist+10;
     if(near&&(!view.shotAt||now-view.shotAt>55)){view.shotAt=now;try{const W2=150,H2=120,oc2=document.createElement('canvas');oc2.width=W2*2;oc2.height=H2*2;
@@ -2964,7 +2977,6 @@ function drawRace(pos,snap){
   // ---- 没入演出：周辺減光・集中線・ゴール閃光 ----
   if(!pre){const lw=Wd-PW-4,heat=Math.max(0,(prog-0.6)/0.4);
     const vg=c.createRadialGradient(lw/2,Hd/2,Math.min(lw,Hd)*(0.42-0.12*heat),lw/2,Hd/2,Math.max(lw,Hd)*0.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,`rgba(0,0,0,${0.35+0.3*heat})`);c.fillStyle=vg;c.fillRect(0,0,lw,Hd);
-    if(fevr>0){c.save();c.globalAlpha=0.18+0.3*fevr;c.strokeStyle='#fff';c.lineWidth=1.2;for(let k=0;k<26;k++){const a=(k/26)*Math.PI*2+now/900,r0=Math.min(lw,Hd)*(0.42+0.05*Math.sin(now/60+k)),r1=r0+30+Math.random()*50;c.beginPath();c.moveTo(lw/2+Math.cos(a)*r0,Hd/2+Math.sin(a)*r0);c.lineTo(lw/2+Math.cos(a)*r1,Hd/2+Math.sin(a)*r1);c.stroke()}c.restore()}
     const nf=snap.f?snap.f.filter(Boolean).length:0;if(nf>=1&&!view.finAt){view.finAt=now;try{noise(0,0.6,0.25,'lowpass',600);tone(70,0,0.4,'sine',0.4)}catch(e){}}
     if(view.finAt){const k=(now-view.finAt)/450;if(k<1){c.fillStyle=`rgba(255,255,255,${0.75*(1-k)})`;c.fillRect(0,0,lw,Hd)}}
     // 観客のどよめき（終盤ほど大きく）
