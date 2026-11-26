@@ -1347,10 +1347,10 @@ function saveMe(){lsSet(PROF_KEY,me);rankSchedule()}
 let rankRO=false,dbNs=null,myUid=null,rankLast='',rankBusy=false,rankTimer=null;
 function worth(){return (me.medals||0)-(me.debt||0)}
 function rankVal(){return (me.debt||0)>0?-(me.debt||0):(me.medals||0)}
-function bigWinCheck(n){if(me.rankOn||n<500||document.querySelector('.rkreg'))return;
+function bigWinCheck(n,why){const mao=why==='maou';if(me.rankOn){if(mao){rankLast='';rankPush()}return}if((!mao&&n<500)||document.querySelector('.rkreg'))return;
   const m=document.createElement('div');m.className='modal rkreg';
   m.innerHTML=`<div class="sheet rkr-s"><div class="rkr-cap">R A N K I N G</div><h2>ランキングに登録できます</h2>
-   <p>1度に <b>${n}</b> 枚のメダルを獲得しました。<br>500枚以上を獲得した人だけが世界ランキングに参加できます。</p>
+   <p>${mao?'野球で <b>魔王キングス</b> を倒しました。<br>魔王を倒した人は世界ランキングに参加できます。':`1度に <b>${n}</b> 枚のメダルを獲得しました。<br>500枚以上を獲得した人だけが世界ランキングに参加できます。`}</p>
    <div class="rkr-name"><small>登録する名前（借用書の署名）</small><b>${esc(me.nick||'名無し')}</b></div>
    <button class="dbtn" id="rkrok">ランキングに登録する</button><button class="link" id="rkrno">あとで</button></div>`;
   document.body.appendChild(m);
@@ -1520,7 +1520,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.25a';
+const P2P_CFG={debug:0};const APP_VER='2026.11.26a';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -3429,7 +3429,7 @@ function showRanking(tab){
     body.innerHTML='<div class="rk-sub">読み込み中…</div>';let to=setTimeout(()=>{body.innerHTML='<div class="rk-sub">ランキングに接続できませんでした。あとでもう一度開いてください</div>'},10000);
     try{await rankPush();const L=await rankList(f);clearTimeout(to);
       let mi=L.findIndex(x=>x.id===myId);
-      body.innerHTML=`${me.rankOn?'':'<div class="rk-sub" style="color:#ffd54a">ダービーか野球で1度に500枚以上獲得すると、ランキングに登録できます</div>'}<div class="rk-sub">${t==='wa'?'所持メダル（借金がある人は△借金額）':'1回でもらった最大のメダル'}　参加 ${L.length}人</div>
+      body.innerHTML=`${me.rankOn?'':'<div class="rk-sub" style="color:#ffd54a">ダービーか野球で1度に500枚以上獲得するか、野球で魔王キングスに勝つと、ランキングに登録できます</div>'}<div class="rk-sub">${t==='wa'?'所持メダル（借金がある人は△借金額）':'1回でもらった最大のメダル'}　参加 ${L.length}人</div>
         ${L.length?L.map((x,i)=>row(i,x.n||'名無し',x[f],x.id===myId)).join(''):'<div class="rk-sub">まだ誰も登録されていません</div>'}
         ${mi<0?`<div class="zk-h">あなた</div>${row(-1,me.nick||'あなた',mv,1)}<div class="rk-sub">${!me.rankOn?'まだ登録されていません':rankRO?'この共有方法では記録を登録できません（見るだけ）':'記録は数秒後に反映されます'}</div>`:''}`}
     catch(e){clearTimeout(to);const msg=String(e&&e.message||e);const hint=/PGRST205|42P01|does not exist|Could not find the table/.test(msg)?'Supabaseにランキング用の表がまだありません（SQLを実行してください）':/401|403|apikey|JWT|permission/i.test(msg)?'Supabaseの鍵か読み取り許可の設定に問題があります':'ランキングを読み込めませんでした';body.innerHTML=`<div class="rk-sub">${hint}</div><div class="rk-sub" style="font-size:10px;opacity:.7;word-break:break-all">${esc(msg)}</div>`}};
@@ -3730,7 +3730,7 @@ function hrEnd(){
    ${res==='win'?`<div class="he-m">勝利メダル<b>+${pay}枚</b></div>`:`<div class="he-m lo">${res==='lose'?'勝利メダルなし。また挑戦しよう':'勝利メダルなし'}</div>`}
    <div class="he-btns"><button class="hbtn gold" onclick="hrStartMatch(${HR_EN.indexOf(e)})">もう一度</button><button class="hbtn glass" onclick="renderHRSelect()">相手をえらぶ</button></div></div>`;
   wrap.appendChild(d);
-  if(res==='win'){hrFireworks();SFX.fanfare();HRS.crowd(2.5);setTimeout(()=>hrPay(pay),700)}else{HRS.crowd(0.5);[0,0.2,0.4].forEach((t,k)=>tone(330-k*60,t,0.3,'triangle',0.08))}
+  if(res==='win'){hrFireworks();SFX.fanfare();HRS.crowd(2.5);setTimeout(()=>hrPay(pay),700);if(e.id==='maou')setTimeout(()=>bigWinCheck(pay,'maou'),2600)}else{HRS.crowd(0.5);[0,0.2,0.4].forEach((t,k)=>tone(330-k*60,t,0.3,'triangle',0.08))}
   hrHud();
 }
 function hrChibi(c,x,y,s,o){o=o||{};const f=o.face||1;c.save();c.translate(x,y);c.scale(s,s);
