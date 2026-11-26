@@ -1523,7 +1523,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.27b';
+const P2P_CFG={debug:0};const APP_VER='2026.11.27c';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -3538,9 +3538,10 @@ function hrWheelStep(dt){const w=HR.wheel;if(!w)return;
   const cur=hrWheelAt(w.a);if(cur!==sp.lastSeg){sp.lastSeg=cur;tone(1300+k*500,0,0.025,'square',0.04)}
   if(k>=1&&!sp.done){sp.done=1;setTimeout(()=>{if(!HR)return;hrWheelResult(sp.seg);setTimeout(()=>{if(HR&&HR.wheel)HR.wheel.spin=null},900)},350)}}
 function hrWheelAmt(lo,hi,p){return lo+Math.floor((hi-lo+1)*Math.pow(Math.random(),p))}
-function hrWheelResult(seg){
+function hrWheelResult(seg){hrWheelResult0(seg);if(HR&&HR.bonusEndPend&&!HR.jpc&&HR.state!=='cut'){HR.bonusEndPend=false;hrBonusFinish(1600)}}
+function hrWheelResult0(seg){
   const st=HR.en.str,bet=HR.bet;HR.state='idle';let pay=0,msg='',cls='good',n=0;
-  if(seg[0]==='JPC'){HR.wbonus=0;HR.big={t:0,s:'JPチャンス!!'};SFX.fanfare();hrSay('<b>JPチャンス!!</b>','hr');HR.state='roul';setTimeout(()=>hrRoulette(),1200);hrHud();return}
+  if(seg[0]==='JPC'){HR.wbonus=0;HR.big={t:0,s:'JPチャンス!!'};SFX.fanfare();hrSay('<b>JPチャンス!!</b>','hr');HR.state='cut';setTimeout(()=>hrJpStart(),1200);hrHud();return}
   if(seg[0]==='FOUL'){if(HR.wbonus){hrSay('ファウル','bad')}else{if(HR.strikes<2)HR.strikes++;hrSay('ファウル','bad');HRS.kakin(0.3)}HR.wbonus=0;hrHud();return}
   HR.strikes=0;
   const adv=k=>{let runs=0;const nb=[0,0,0];for(let i=2;i>=0;i--)if(HR.bases[i]){const to=i+k;if(to>=3)runs++;else nb[to]=1}if(k>=4)runs++;else nb[k-1]=1;HR.bases=nb;return runs};
@@ -3862,13 +3863,15 @@ function hrJpStart(){if(!HR)return;HR.jpc={prev:HR.strip,sp:HR.speed,t:0};HR.str
 function hrJpEnd(win){if(!HR||!HR.jpc)return;const j=HR.jpc;HR.jpc=null;let pay=0;
   if(win){pay=jpRoll();hrSay(`<b>JACKPOT!!</b><br><span class="py">+${pay}枚</span>`,'hr',3200);HR.big={t:0,s:'JACKPOT!!'};hrFireworks();setTimeout(hrFireworks,500);SFX.fanfare();HRS.hrfx&&HRS.hrfx();HRS.crowd&&HRS.crowd(3);hrPay(pay)}
   else{hrSay('ジャックポットならず…','bad',1600);tone(220,0,0.4,'triangle',0.06)}
-  setTimeout(()=>{if(!HR)return;HR.strip=j.prev||hrStrip(hrMain());HR.speed=j.sp||80;hrAmb(true);if(HR.bonus)hrDrone(true);hrHud()},win?2600:1500);hrHud()}
+  setTimeout(()=>{if(!HR)return;hrAmb(true);if(HR.bonusEndPend&&!HR.bonus){HR.bonusEndPend=false;hrBonusFinish(0);return}HR.strip=j.prev||hrStrip(hrMain());HR.speed=j.sp||80;if(HR.bonus)hrDrone(true);hrHud()},win?2600:1500);hrHud()}
 function jpRoll(){const v=Math.random()<0.8?1000+Math.random()*7000:8000+Math.random()*2000;return Math.round(v/10)*10}
 function hrAwakeStrip(){return [['OUT',18],['CH',58],['JP',52],['HRW',24],['CH',58],['OUT',16],['JP',50],['CH',58],['HRW',24],['OUT',18],['CH',58],['JP',52]]}
 function hrAwakeStart(){if(!HR)return;HR.state='idle';HR.awake=3;HR.strip=hrStrip(hrAwakeStrip());hrSay('覚醒!!<br><small>3球のあいだ、チャンス・JPチャンス・ホームランだらけ</small>','hr',1800);hrHud()}
 function hrAwakeRoll(){if(!HR||HR.side!=='off'||HR.bonus||HR.awake>0||HR.state!=='idle')return;if(Math.random()<0.02){HR.state='cut';setTimeout(()=>{if(HR)hrCutin('覚醒')},400)}}
-function hrBonusUse(){if(!HR.bonus)return;HR.bonus--;if(!HR.bonus){hrDrone(false);setTimeout(()=>{if(!HR)return;hrWheelSegs();HR.strip=hrStrip(HR.awake>0?hrAwakeStrip():hrMain());HR.speed=80;hrSay('チャンス終了');hrHud()},1800)}}
-function hrBonusStart(kind){if(!HR)return;HR.state='idle';setTimeout(hrWheelSegs,0);hrDrone(true);const dch=kind==='大チャンス';HR.bonus=3;HR.bonusKind=kind;HR.strip=hrStrip(hrChanceStrip(dch));HR.speed=80;
+function hrBonusUse(defer){if(!HR.bonus)return;HR.bonus--;if(!HR.bonus){if(defer){HR.bonusEndPend=true;return}hrBonusFinish(1800)}}
+// 大チャンスの終了（ルーレットやJPチャレンジが終わるまで待ってから元に戻す）
+function hrBonusFinish(delay){if(!HR)return;hrDrone(false);const go=()=>{if(!HR||HR.bonus)return;hrWheelSegs();HR.strip=hrStrip(HR.awake>0?hrAwakeStrip():hrMain());HR.speed=80;hrSay('チャンス終了');hrHud()};if(delay)setTimeout(go,delay);else go()}
+function hrBonusStart(kind){if(!HR)return;HR.bonusEndPend=false;HR.state='idle';setTimeout(hrWheelSegs,0);hrDrone(true);const dch=kind==='大チャンス';HR.bonus=3;HR.bonusKind=kind;HR.strip=hrStrip(hrChanceStrip(dch));HR.speed=80;
   hrSay(`ホームランを打て!!<br><small>${HR.bonus}球無料・チャンス枠が大幅アップ・虹色の???も出現</small>`,'hr',1800);hrHud()}
 function hrLand(s,b){
   const bet=HR.bet,ch=HR.bonus>0;HR.ball=null;HR.state='idle';HR.strikes=0;let pay=0,msg='',cls='good',jpr=0;
@@ -3887,7 +3890,7 @@ function hrLand(s,b){
   else if(s.t==='DCH'){HR.state='cut';hrCutin('大チャンス')}
   else if(s.t==='ITEM'){const it=pick([['guide','打球ガイド','3球のあいだ落下地点が見える'],['power','ジャストミート','3球のあいだタイミングが合いやすい'],['medal','メダル袋','すぐにメダルがもらえる']]);
     if(it[0]==='guide')HR.guide=3;if(it[0]==='power')HR.power=3;if(it[0]==='medal')pay=bet*4;msg=`アイテム獲得<br><b>${it[1]}</b><br><small>${it[2]}</small>`;tone(1046,0,0.15,'sine',0.1);tone(1568,0.1,0.25,'sine',0.1)}
-  if(ch)hrBonusUse();
+  if(ch)hrBonusUse(!!(s&&(s.t==='CH'||s.t==='JP'||s.t==='DCH')));
   if(HR.guide&&!(s&&s.t==='ITEM'))HR.guide=Math.max(0,HR.guide-1);
   if(msg)hrSay(msg+(pay?`<br><span class="py">+${pay}枚</span>`:''),cls);
   hrPay(pay);if(jpr){HR.state='cut';setTimeout(()=>hrJpStart(),1300)}hrHud();return pay;
