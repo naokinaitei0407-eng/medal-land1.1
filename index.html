@@ -1296,7 +1296,7 @@ const NB=['ダッシュ','ボルト','ロケット','ハート','ウイング','
 const DPR=Math.min(1.5,window.devicePixelRatio||1);
 const NOTION_RANK='https://www.notion.so/422e5b779cc181abb1a1d3a2cbc0fd72';
 function raf2(f,ms){setTimeout(()=>requestAnimationFrame(f),ms)}
-const BET_TIME=60, START_MEDALS=100, MAX_CELL=99;
+const BET_TIME=120, START_MEDALS=100, MAX_CELL=99;
 const PROF_KEY='atsumare-derby-prof-v2', WORLD_KEY='atsumare-derby-world-v4';
 const PAIRS=[];for(let a=1;a<=5;a++)for(let b=a+1;b<=6;b++)PAIRS.push(a+'-'+b);
 const EXS=[];for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)if(a!==b)EXS.push(a+'_'+b);
@@ -1520,7 +1520,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.26a';
+const P2P_CFG={debug:0};const APP_VER='2026.11.26b';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1817,7 +1817,7 @@ function bgmStart(){bgmStop();const a=ac();if(!a)return;bgmNext=a.currentTime+0.
   },60)}
 function bgmStop(){clearInterval(bgmTimer);bgmTimer=null}
 function beginBetLocal(){document.body.classList.remove('lobbyon');{const m0=role==='host'?matchStart:(hostInfo&&+hostInfo.m0);if(m0&&race&&race.rn===m0&&mBaseRn!==m0){mBase=worth();mBaseRn=m0}}
-  myBets={};betHist=[];myCarrot=false;mode=0;phase='bet';setTimeout(bgmStart,50);setTimeout(()=>vox(tutSeen('derby')?'ベットを開始してください。締め切りまで1分です':'',true),400);
+  myBets={};betHist=[];myCarrot=false;mode=0;phase='bet';setTimeout(bgmStart,50);setTimeout(()=>vox(tutSeen('derby')?'ベットを開始してください。締め切りまで2分です':'',true),400);
   let debtNew=false;
   if(me.medals<=0&&(me.bank||0)>0){const v=Math.min(me.bank,START_MEDALS);me.bank-=v;me.medals+=v;saveMe();setTimeout(()=>toast(`貯金から${v}枚引き出しました`),300)}
   if(me.medals<=0){me.debt=(me.debt||0)+START_MEDALS;me.medals+=START_MEDALS;me.refill=(me.refill||0)+1;saveMe();debtNew=true}
@@ -2098,7 +2098,7 @@ function betCount(n){
 }
 function updateTimer(){
   const tv=document.getElementById('tv');if(!tv)return;
-  const s=Math.max(0,Math.ceil(remain));tv.textContent=s;
+  const s=Math.max(0,Math.ceil(remain));tv.textContent=s>=60?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):s;
   document.getElementById('timer').classList.toggle('hurry',s<=5);
   {const sc=Math.ceil(remain);if(phase==='bet'&&sc!==window._vsc){window._vsc=sc;if(sc===10)vox('締め切りまで、あと10秒！',true)}}
   {const tb=document.getElementById('tbar');if(tb){tb.style.width=(Math.max(0,remain)/BET_TIME*100)+'%';tb.className=remain<=5?'red':remain<=8?'yel':''}}
@@ -2648,7 +2648,7 @@ function derbyTut(){
   const wasP=paused;if(role==='solo')paused=true;
   runTut('derby',[
     {h:'あつまれダービーへようこそ',t:'6頭の馬のレースで<b>どの馬が勝つか予想して</b>メダルを賭けるゲームです。実際の画面で順番に説明します。',say:'あつまれダービーへようこそ！'},
-    {sel:'#timer',h:'BET締切までの時間',t:'<b>1分</b>以内に賭けてね。0になるとレースがスタートします。'},
+    {sel:'#timer',h:'BET締切までの時間',t:'<b>2分</b>以内に賭けてね。0になるとレースがスタートします。'},
     {sel:'.pred',h:'展開予想図',t:'序盤の隊列の予想です。左ほど前を走りそうな馬。天気によって予想が外れやすくなります。'},
     {sel:'.modes',h:'賭け方を切り替える',t:'<b>単勝・馬連</b>：1着の馬／1-2着の組み合わせ<br><b>馬単</b>：1着→2着を順番どおり（高配当）'},
     {sel:'#board>*:first-child',h:'オッズ表（ここに賭ける）',t:'マスの数字が<b>倍率</b>。マスを<b>タップで1回BET</b>、<b>長押しで連続BET</b>。当たれば 賭けた枚数×倍率 のメダルがもらえます。'},
