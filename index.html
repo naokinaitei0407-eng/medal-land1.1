@@ -1523,7 +1523,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.27a';
+const P2P_CFG={debug:0};const APP_VER='2026.11.27b';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -3511,7 +3511,7 @@ const HRW=360,HRH=540,HR_BETS=[1,3,5],HR_SY=138,HR_SH=60,HR_PX=180,HR_PY=470,HR_
 let HR=null;
 const HR_ST={OUT:{l:['アウト'],c:'#1e4fa8',f:'#fff'},'1B':{l:['ヒット'],c:'#2e9d48',f:'#fff'},'2B':{l:['2ベース'],c:'#1e88e5',f:'#fff'},'3B':{l:['3ベース'],c:'#ef6c00',f:'#fff'},
  HR:{l:['ホーム','ラン'],c:'#d32f2f',f:'#ffe14d'},CH:{l:['チャンス!'],c:'#ffd54a',f:'#7a3b00'},DCH:{l:['大','チャンス'],c:'#ff3d3d',f:'#fff'},ITEM:{l:['アイテム'],c:'#00897b',f:'#fff'},
- W:{l:['WIN'],c:'#1b1b2b',f:'#fff'},JP:{l:[['JP',1],['チャンス',0.6]],c:'#ffb300',f:'#4a1c00'},HRW:{l:['???'],c:'#e040fb',f:'#fff'}};
+ W:{l:['WIN'],c:'#1b1b2b',f:'#fff'},JP:{l:[['JP',1],['チャンス',0.6]],c:'#ffb300',f:'#4a1c00'},GRY:{l:[''],c:'#5f6368',f:'#ccc'},JPG:{l:[''],c:'#ffd600',f:'#000'},HRW:{l:['???'],c:'#e040fb',f:'#fff'}};
 const HR_NORM=[['OUT',70],['1B',58],['OUT',62],['2B',48],['CH',28],['OUT',74],['1B',56],['ITEM',36],['OUT',66],['3B',36],['1B',58],['OUT',70],['HR',26],['OUT',50],['2B',46],['OUT',62],['DCH',22],['OUT',50],['1B',56],['OUT',64],['2B',44],['CH',26]];
 const HR_CHN=[['W',48,0],['HR',40],['W',48,2],['W',48,0],['W',48,3],['W',48,0],['W',44,10],['W',48,0],['HR',40],['W',48,2],['W',48,0],['W',48,5]];
 const HR_DCH=[['W',48,0],['HR',44],['W',48,3],['JP',18],['W',48,0],['W',44,15],['W',48,0],['HR',44],['W',48,2],['W',36,50],['W',48,0],['W',48,5],['HR',44],['W',48,0]];
@@ -3597,7 +3597,7 @@ function startHomerun(){
   renderHRSelect();
 }
 const HRSV='mland-hr-save';
-function hrSave(){if(!HR||!HR.en||HR.state==='end')return;const k=['outs','strikes','inn','side','bases','eb','my','op','half','mBet','mP','bonus','bonusKind','awake','cons','total'];const o={ei:HR_EN.indexOf(HR.en)};k.forEach(x=>o[x]=HR[x]);o.bonusKind=o.bonusKind||'';lsSet(HRSV,o)}
+function hrSave(){if(!HR||!HR.en||HR.state==='end'||HR.jpc)return;const k=['outs','strikes','inn','side','bases','eb','my','op','half','mBet','mP','bonus','bonusKind','awake','cons','total'];const o={ei:HR_EN.indexOf(HR.en)};k.forEach(x=>o[x]=HR[x]);o.bonusKind=o.bonusKind||'';lsSet(HRSV,o)}
 function hrClearSave(){try{localStorage.removeItem(HRSV)}catch(e){}}
 function hrResume(){const o=lsGet(HRSV);if(!o||!(o.ei>=0))return;const ei=o.ei;delete o.ei;hrStartMatch(ei,o)}
 function renderHRSelect(){
@@ -3631,7 +3631,7 @@ function hrPullStart(p){
   if(HR.side==='def'){HR.ft={x:Math.max(20,Math.min(HRW-20,p.x)),y:Math.max(HR_SY+HR_SH+16,Math.min(HRH-30,p.y))};return}
   if(HR.state==='pitch'&&!HR.pull&&HR.pitch&&!HR.pitch.def){HR.pull={sx:p.x,sy:p.y,cx:p.x,cy:p.y,pw:0,ax:HRW/2};return}
   if(HR.state!=='idle')return;
-  if(!HR.bonus){if(!ensureMedals(HR.bet)){hrHud();return}me.medals-=HR.bet;HR.mBet+=HR.bet;HR.mP++;saveMe()}
+  if(!HR.bonus&&!HR.jpc){if(!ensureMedals(HR.bet)){hrHud();return}me.medals-=HR.bet;HR.mBet+=HR.bet;HR.mP++;saveMe()}
   const st=HR.en.str;
   HR.pull={sx:p.x,sy:p.y,cx:p.x,cy:p.y,pw:0,ax:HRW/2};
   if(HR.awake>0&&!HR.bonus)HR.awakeUse=1;
@@ -3653,7 +3653,7 @@ function hrPitchK(p){const kl=(p.t-p.rel)/p.travel;if(kl<0)return -1;if(kl>1)ret
 function hrPitchX(p,k){const kk=Math.min(1,k);switch(p.type){case 'CV':return Math.sin(kk*Math.PI)*p.C;case 'SL':return p.C*Math.pow(kk,3);default:return Math.sin(kk*Math.PI)*p.C}}
 function hrWindK(p){if(!p||p.t<p.delay||p.t>=p.rel)return 0;const w=(p.t-p.delay)/p.wind;if(!p.feint)return w;const f=0.6/p.wind;return w<0.3?w/0.3*0.8:w<0.3+f?0.8:0.8+0.2*(w-0.3-f)/(1-0.3-f)}
 function hrAutoPitch(){if(!HR||HR.state!=='idle')return;
-  if(!HR.bonus){if(!ensureMedals(HR.bet)){hrHud();return}me.medals-=HR.bet;HR.mBet+=HR.bet;HR.mP++;saveMe()}
+  if(!HR.bonus&&!HR.jpc){if(!ensureMedals(HR.bet)){hrHud();return}me.medals-=HR.bet;HR.mBet+=HR.bet;HR.mP++;saveMe()}
   if(HR.awake>0&&!HR.bonus)HR.awakeUse=1;
   HR.state='pitch';HR.pitch=hrMakePitch(HR.en.str,HR.bonus>0);HR.pitch.delay=0.2;HR.pitch.rel=HR.pitch.delay+HR.pitch.wind;HR.pitch.dur=HR.pitch.rel+HR.pitch.travel;hrSay('相手が投げてきた！');hrHud()}
 function hrPullUpd(){const p=HR.pull;if(!p)return;p.ax=Math.max(14,Math.min(HRW-14,HRW/2+(p.cx-p.sx)*2.0))}
@@ -3839,7 +3839,7 @@ function hrHud(){if(!HR)return;hrSave();const $=id=>document.getElementById(id);
   h.classList.toggle('def',HR.side==='def');h.innerHTML='<span>'+(HR.state==='end'?'試合終了':HR.side==='def'?(HR.state==='dfly'?'<b>落下地点をタッチ！</b>':'守備中　打球が飛んだら<b>落ちる所をタッチ</b>'):HR.state==='end'?'試合終了':HR.bonus&&HR.state!=='pitch'?`<b>${HR.bonusKind}</b>　あと${HR.bonus}球（無料）<br>ここか画面を<b>長押し</b>して<b>離して</b>打つ`:HR.state==='idle'?`ここか画面を<b>長押し</b>して構える（左右にずらして狙う）<br>ボールが輪に重なったら<b>離して</b>打つ`:HR.state==='pitch'?'ボールが来たら離す！':HR.state==='cut'?'<b>チャンス到来！</b>':HR.state==='wheel'?'<b>チャンスルーレット！</b>':'打球の行方は…')+'</span>';
 }
 function hrSay(t,cls,ms){const e=document.getElementById('hrmsg');if(!e)return;e.className='hr-msg show '+(cls||'');e.innerHTML=t;clearTimeout(HR.mt);HR.mt=setTimeout(()=>{if(e)e.className='hr-msg'},ms||1700)}
-function hrStrike(t){if(HR.side==='def')return;HR.strikes++;HR.state='idle';HR.pitch=null;HR.pull=null;SFX.nope();
+function hrStrike(t){if(HR.side==='def')return;if(HR.jpc){HR.state='idle';HR.pitch=null;HR.pull=null;HR.strikes=0;hrJpEnd(0);return}HR.strikes++;HR.state='idle';HR.pitch=null;HR.pull=null;SFX.nope();
   if(HR.bonus){HR.strikes=0;hrBonusUse();hrSay(t);hrHud();return}
   if(HR.strikes>=3){HR.strikes=0;hrOut('三振！')}else hrSay(t);hrHud()}
 function hrPay(n){if(n>(me.best||0)){me.best=n;me.bestInfo=null}if(n>=500)setTimeout(()=>bigWinCheck(n),2600);
@@ -3855,6 +3855,14 @@ function hrDrone(on){clearTimeout(window._hrHb);if(!on)return;
   const beat=()=>{if(!HR||!HR.bonus||phase!=='hr'){return}const a=ac();if(a&&HR.state!=='cut'&&HR.state!=='roul'){tone(58,0,0.16,'sine',0.5);noise(0,0.05,0.12,'lowpass',120);tone(48,0.16,0.2,'sine',0.38)}
     const p=HR.pitch,fast=p&&p.t>=p.delay;window._hrHb=setTimeout(beat,fast?420:HR.state==='pitch'?620:820)};beat()}
 function hrRoll(dur,st){const a=ac();if(!a)return;st=st||0;tone(45,st,0.5,'sine',0.35);noise(st,0.3,0.25,'lowpass',180);let t=st+0.35,gap=0.16;while(t<dur-0.02){noise(t,0.035,0.06+0.25*((t-st)/(dur-st)),'bandpass',1700);t+=gap;gap=Math.max(0.035,gap*0.88)}}
+// ===== ジャックポットチャレンジ：音が消え、暗い中を灰色の的が流れる。小さな金色の点に当てればJACKPOT =====
+function hrJpStrip(){const a=[];let x=0;const n=18,gi=Math.floor(Math.random()*n);for(let i=0;i<n;i++){a.push({t:'GRY',w:64,x});x+=64;if(i===gi){a.push({t:'JPG',w:6,x});x+=6}}a.L=x;return a}
+function hrJpStart(){if(!HR)return;HR.jpc={prev:HR.strip,sp:HR.speed,t:0};HR.strip=hrJpStrip();HR.speed=55;HR.state='idle';HR.strikes=0;hrDrone(false);hrAmb(false);
+  try{const a=ac();if(a){tone(70,0,0.6,'sine',0.25)}}catch(e){}hrSay('<b>JPチャレンジ</b><br><small>金色に光る小さな点に当てろ</small>','hr',2200);hrHud()}
+function hrJpEnd(win){if(!HR||!HR.jpc)return;const j=HR.jpc;HR.jpc=null;let pay=0;
+  if(win){pay=jpRoll();hrSay(`<b>JACKPOT!!</b><br><span class="py">+${pay}枚</span>`,'hr',3200);HR.big={t:0,s:'JACKPOT!!'};hrFireworks();setTimeout(hrFireworks,500);SFX.fanfare();HRS.hrfx&&HRS.hrfx();HRS.crowd&&HRS.crowd(3);hrPay(pay)}
+  else{hrSay('ジャックポットならず…','bad',1600);tone(220,0,0.4,'triangle',0.06)}
+  setTimeout(()=>{if(!HR)return;HR.strip=j.prev||hrStrip(hrMain());HR.speed=j.sp||80;hrAmb(true);if(HR.bonus)hrDrone(true);hrHud()},win?2600:1500);hrHud()}
 function jpRoll(){const v=Math.random()<0.8?1000+Math.random()*7000:8000+Math.random()*2000;return Math.round(v/10)*10}
 function hrAwakeStrip(){return [['OUT',18],['CH',58],['JP',52],['HRW',24],['CH',58],['OUT',16],['JP',50],['CH',58],['HRW',24],['OUT',18],['CH',58],['JP',52]]}
 function hrAwakeStart(){if(!HR)return;HR.state='idle';HR.awake=3;HR.strip=hrStrip(hrAwakeStrip());hrSay('覚醒!!<br><small>3球のあいだ、チャンス・JPチャンス・ホームランだらけ</small>','hr',1800);hrHud()}
@@ -3866,6 +3874,7 @@ function hrLand(s,b){
   const bet=HR.bet,ch=HR.bonus>0;HR.ball=null;HR.state='idle';HR.strikes=0;let pay=0,msg='',cls='good',jpr=0;
   const adv=n=>{let runs=0;const nb=[0,0,0];for(let i=2;i>=0;i--)if(HR.bases[i]){const to=i+n;if(to>=3)runs++;else nb[to]=1}if(n>=4)runs++;else nb[n-1]=1;HR.bases=nb;return runs};
   if(s){HR.flash={x:s.x,t:0,c:HR_ST[s.t].c}}
+  if(HR.jpc){hrJpEnd(s&&s.t==='JPG'?1:0);return 0}
   if(!s||s.t==='OUT'){if(ch){msg='ハズレ';cls='bad'}else{hrOut(s?'ゴロ…アウト':'内野ゴロ…アウト')}}
   else if(s.t==='1B'||s.t==='2B'||s.t==='3B'){const n=+s.t[0],runs=adv(n);HR.my+=runs;if(runs)HRS.crowd(1.5);pay=Math.floor(bet*(n-1)*0.5+runs*bet*1.5);msg=`${HR_ST[s.t].l.join('')}${runs?`　${runs}点！`:''}`;HR.cons=0;tone(700+n*120,0,0.15,'triangle',0.1)}
   else if(s.t==='HR'){const runs=ch?1:adv(4);HR.my+=runs;HRS.hrfx();const dist=Math.round(105+b.q*30+b.pw*15+Math.random()*10);const db=bet*Math.max(0,Math.floor((dist-110)/10));pay=runs*bet*3+db;HR.cons++;cls='hr';
@@ -3881,7 +3890,7 @@ function hrLand(s,b){
   if(ch)hrBonusUse();
   if(HR.guide&&!(s&&s.t==='ITEM'))HR.guide=Math.max(0,HR.guide-1);
   if(msg)hrSay(msg+(pay?`<br><span class="py">+${pay}枚</span>`:''),cls);
-  hrPay(pay);if(jpr){HR.state='roul';setTimeout(()=>hrRoulette(),1300)}hrHud();return pay;
+  hrPay(pay);if(jpr){HR.state='cut';setTimeout(()=>hrJpStart(),1300)}hrHud();return pay;
 }
 function hrCutin(kind){
   const awk=kind==='覚醒',big=kind==='大チャンス'||awk,wrap=document.querySelector('.hr-wrap');if(!wrap){awk?hrAwakeStart():hrBonusStart(kind);return}
@@ -4113,6 +4122,7 @@ function hrDraw(t){
    c.fillStyle='#fff';c.font='400 17px "Reggae One","Dela Gothic One",sans-serif';c.textAlign='left';c.lineWidth=4;c.strokeStyle='#5a0000';const bt=HR.awake>0&&!ch?`覚醒中　あと${HR.awake}球`:ch?'ホームランを打て!!':HR.side==='off'?`攻撃中　${HR.inn}回表`:`守備中　${HR.inn}回裏`;c.strokeText(bt,10,25);c.fillStyle=ch?`hsl(${50+Math.sin(t*12)*10},100%,${70+Math.sin(t*12)*15}%)`:'#fff';c.fillText(bt,10,25);
    const jg=c.createLinearGradient(0,2,0,34);jg.addColorStop(0,'#ffe57f');jg.addColorStop(1,'#ff9100');c.fillStyle=jg;c.beginPath();c.moveTo(232,2);c.lineTo(HRW-4,2);c.lineTo(HRW-4,34);c.lineTo(222,34);c.fill();c.strokeStyle='#7a2e00';c.lineWidth=2;c.stroke();
    c.fillStyle='#7a2e00';c.font='900 8px sans-serif';c.textAlign='center';c.fillText('JACKPOT',HRW-62,12);c.font='400 18px "DotGothic16",monospace';c.fillStyle='#4a1400';c.fillText('????',HRW-62,31);c.restore()}
+  if(HR.jpc){c.fillStyle='rgba(0,0,0,.65)';c.fillRect(0,0,HRW,HRH)}
   // 流れる枠
   const S=HR.strip;c.fillStyle='#0a0f1e';c.fillRect(0,HR_SY-6,HRW,HR_SH+12);
   for(let rep=-1;rep<=Math.ceil(HRW/S.L)+1;rep++)S.forEach(s=>{const x=s.x-(HR.off%S.L)+rep*S.L;if(x>HRW||x+s.w<0)return;const st=HR_ST[s.t];
@@ -4126,7 +4136,10 @@ function hrDraw(t){
       const hs=L.map(([l,k])=>fs*k+2),tot=hs.reduce((a,b)=>a+b,0);let yy=HR_SY+HR_SH/2-tot/2;L.forEach(([l,k],i)=>{const f=fs*k;c.font=`400 ${f}px "Reggae One","Dela Gothic One",sans-serif`;yy+=hs[i]/2;c.save();c.translate(x+s.w/2,yy);c.transform(1,0,-0.12,1,0,0);c.lineJoin='round';c.lineWidth=4.5;c.strokeStyle='rgba(0,0,0,.75)';c.strokeText(l,0,1);c.fillStyle='rgba(0,0,0,.5)';c.fillText(l,1,2.5);c.fillStyle=st.f;c.fillText(l,0,0);c.restore();yy+=hs[i]/2})}
     if(HR.flash&&HR.flash.x===s.x&&s===hrSlotAt(x+s.w/2)){c.fillStyle=`rgba(255,255,255,${0.7*(1-HR.flash.t/0.9)*(Math.sin(HR.flash.t*40)>0?1:0.4)})`;c.fillRect(x,HR_SY,s.w,HR_SH)}
     c.textBaseline='alphabetic'});
-  c.fillStyle='#ffd54a';c.fillRect(0,HR_SY-6,HRW,3);c.fillRect(0,HR_SY+HR_SH+3,HRW,3);
+  if(HR.jpc){for(let rep=-1;rep<=Math.ceil(HRW/S.L)+1;rep++)S.forEach(s=>{if(s.t!=='JPG')return;const x=s.x-(HR.off%S.L)+rep*S.L+s.w/2;if(x<-30||x>HRW+30)return;const cy=HR_SY+HR_SH/2,pu=0.6+0.4*Math.sin(t*9);
+      const g=c.createRadialGradient(x,cy,1,x,cy,26);g.addColorStop(0,`rgba(255,240,150,${0.9*pu})`);g.addColorStop(0.4,`rgba(255,200,0,${0.4*pu})`);g.addColorStop(1,'rgba(255,200,0,0)');c.fillStyle=g;c.fillRect(x-26,cy-26,52,52);
+      c.fillStyle='#fff8d0';c.fillRect(x-s.w/2,HR_SY,s.w,HR_SH);c.fillStyle=`rgba(255,255,255,${pu})`;[[0,-1],[0,1],[-1,0],[1,0]].forEach(([dx,dy])=>{c.fillRect(x+dx*10-(dx?4:0.75),cy+dy*10-(dy?4:0.75),dx?8:1.5,dy?8:1.5)})})}
+  c.fillStyle=HR.jpc?'#777':'#ffd54a';c.fillRect(0,HR_SY-6,HRW,3);c.fillRect(0,HR_SY+HR_SH+3,HRW,3);
   for(let i=0;i<3;i++){const ax=HRW-10-((t*40+i*14)%42);c.fillStyle='#ffd54a';c.beginPath();c.moveTo(ax,HR_SY-14);c.lineTo(ax+6,HR_SY-18);c.lineTo(ax+6,HR_SY-10);c.fill()}
   for(const yy of [HR_SY-6,HR_SY+HR_SH+3]){c.fillStyle='#b71c1c';c.fillRect(0,yy-2,HRW,7);for(let x=6;x<HRW;x+=24){c.fillStyle='#ffd54a';c.beginPath();c.arc(x,yy+1.5,1.8,0,7);c.fill()}}
   if(HR.side==='def'){c.fillStyle='rgba(10,15,30,.82)';c.fillRect(0,HR_SY-8,HRW,HR_SH+16);c.fillStyle='#fff';c.font='400 20px "Dela Gothic One","Mochiy Pop One",sans-serif';c.textAlign='center';c.fillText('守備中　アウトをとれ!',HRW/2,HR_SY+HR_SH/2+2);c.font='900 11px "M PLUS Rounded 1c",sans-serif';c.fillStyle='#ffd54a';c.fillText(`VS ${HR.en.n}`,HRW/2,HR_SY+HR_SH/2+20)}
@@ -4171,6 +4184,7 @@ function hrDraw(t){
     if(HR.dball){const b=HR.dball,k=Math.min(1,b.t/b.T),x=b.x0+(b.tx-b.x0)*k,y=b.y0+(b.ty-b.y0)*k-Math.sin(k*Math.PI)*(b.hr?90:110),sz=4+Math.sin(k*Math.PI)*5;
       c.fillStyle='rgba(0,0,0,.3)';c.beginPath();c.ellipse(b.x0+(b.tx-b.x0)*k,b.y0+(b.ty-b.y0)*k,4,2,0,0,7);c.fill();c.fillStyle='#fff';c.beginPath();c.arc(x,y,sz,0,7);c.fill();c.strokeStyle='#e53935';c.lineWidth=1;c.stroke()}}
   // 打球
+  if(HR.jpc){c.fillStyle='rgba(0,0,0,.5)';c.fillRect(0,HR_SY+HR_SH+6,HRW,HRH)}
   if(HR.ball){const b=HR.ball,k3=Math.min(1,b.t/b.T),[x,y,s]=hrBallPos(b,k3);if(b.trail)b.trail.forEach(([tx,ty,ts],i)=>{c.fillStyle=`rgba(255,240,180,${i/b.trail.length*0.6})`;c.beginPath();c.arc(tx,ty,5*ts,0,7);c.fill()});
     c.fillStyle='#fff';c.beginPath();c.arc(x,y,7*s,0,7);c.fill();c.strokeStyle='#e53935';c.lineWidth=1.2;c.beginPath();c.arc(x,y,7*s,0.5,2.6);c.stroke()}
   if(HR.awake>0&&HR.side==='off'){c.strokeStyle=`hsla(${(t*200)%360},100%,60%,${0.7+0.3*Math.sin(t*10)})`;c.lineWidth=6;c.strokeRect(3,3,HRW-6,HRH-6)}
@@ -4242,6 +4256,7 @@ const MUS={
 let musCur=null,musNext=0,musStep=0,musRaceAt=0;
 function musWant(){if(me.mute)return null;
   if(phase==='hrsel')return 'battle';
+  if(phase==='hr'&&HR&&HR.jpc)return null;
   if(phase==='hr'&&HR&&HR.side==='off'){if(['cut','roul','end','chg'].includes(HR.state))return null;if(HR.state==='wheel')return null;if(HR.bonus)return 'dch';if(HR.awake>0)return 'awake';return 'calm'}
   if(phase==='hr'&&HR&&!['end','chg'].includes(HR.state))return 'calm';
   if(phase==='race'){if(!musRaceAt)musRaceAt=performance.now();return performance.now()-musRaceAt>4500?'race':null}
