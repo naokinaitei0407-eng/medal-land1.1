@@ -512,7 +512,9 @@ canvas{width:100%;height:330px;display:block;border-radius:14px;box-shadow:0 4px
 .mp2-list em{font-style:normal;font-size:11px;color:#fff;background:#c62828;border-radius:5px;padding:0 4px}
 .mp2-foot{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:12px;font-weight:800;color:#cfc8da}
 /* 取消ボタン */
-.dk-btn.undo{position:relative;overflow:hidden;width:86px;font-size:16px}
+.dk-btn.undo{position:relative;overflow:hidden;width:92px;font-size:14px;padding:6px 4px}
+.dk-cx{display:flex;flex-direction:column;gap:5px}.dk-cx .dk-btn{height:auto;min-height:36px}.dk-btn.undo.all{background:linear-gradient(#e53935,#b71c1c);color:#fff}
+.cell{position:relative}.cmx{position:absolute;left:-4px;top:-4px;z-index:3;width:26px;height:26px;border-radius:50%;background:#e53935;color:#fff;font-weight:900;font-size:18px;line-height:24px;text-align:center;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.4)}
 .dk-fill{position:absolute;left:0;bottom:0;height:4px;width:0;background:#ff5252}
 
 /* ===== ホーム ===== */
@@ -1432,7 +1434,7 @@ function makeRunners(r,opt={}){
   return r.hs.map((h,i)=>{
     const no=i+1;
     const luck=opt.det?0:gauss()*(h.type==='mypace'?0.022:0.035)*k+((opt.bias&&opt.bias[no])||0);
-    return {no,h,d:0,n:0,stun:0,fin:false,ft:0,nh:0,post:0,v:0,bump:0,boost:0,boostAmt:0,
+    return {no,h,d:0,n:0,stun:0,fin:false,ft:0,nh:0,post:0,v:0,bump:0,boost:0,boostAmt:0,surge:(opt.surge&&opt.surge[no])||0,
       base:(15.8+h.spd*0.08)*(1+condMod(h,r)*0.7+luck),
       thr:Math.min(1,(1000+h.sta*280)/r.dist*(h.type==='nige'?0.9:1))};
   });
@@ -1448,7 +1450,8 @@ function stepRunners(rs,r,dt,t,onEvent,det){
     if(!det){const sg=(x.h.type==='mypace'?0.008:0.02)*k;x.n=x.n*phi+gauss()*sg*inn;v*=1+x.n}
     if(x.stun>0){v*=0.55;x.stun-=dt}
     if(x.boost>0){v*=1+x.boostAmt;x.boost-=dt}
-    if(p>0.5){const gp=(ldD-x.d)/r.dist;v*=gp<0.003?0.975:1+Math.min(0.11,gp*2.4)}
+    if(x.surge&&p>0.55)v*=1+x.surge*Math.min(1,(p-0.55)/0.3);
+    if(p>0.5&&p<0.88){const gp=(ldD-x.d)/r.dist;v*=gp<0.003?0.99:1+Math.min(0.05,gp*1.6)}
     x.v=v;x.d+=v*dt;
     if(r.hurdles&&x.nh<r.hurdles.length&&x.d>=r.hurdles[x.nh]){
       x.nh++;
@@ -1520,7 +1523,7 @@ function oddsOf(k){return race.odds[k[0]][k.slice(1)]}
 // ===== P2P部屋（Claude外で開いたとき用：PeerJS） =====
 function loadPeerJS(){return new Promise((ok,ng)=>{if(window.Peer)return ok();const srcs=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;const nx=()=>{if(i>=srcs.length){toast('通信の準備に失敗しました。ネットにつながっているか確認してください');return ng(new Error('peerjs'))}const sc=document.createElement('script');sc.src=srcs[i++];sc.onload=()=>window.Peer?ok():nx();sc.onerror=nx;document.head.appendChild(sc)};nx()})}
 function p2pRoomNs(){return {join:async name=>{await loadPeerJS();return p2pJoin(name)}}}
-const P2P_CFG={debug:0};const APP_VER='2026.11.26b';
+const P2P_CFG={debug:0};const APP_VER='2026.11.27a';
 let p2pRole='client';
 function p2pJoin(name){
   const hubId='mland-'+name.replace(/[^a-z0-9-]/gi,''),myId=Math.random().toString(36).slice(2,10);
@@ -1843,12 +1846,14 @@ function machineBias(betsList){
   }
   for(let n=1;n<=6;n++){
     const share=ex[n]/maxE,lo=Math.log10(r.odds.w[n]);
-    bias[n]=W.machine.mode==='release'?0.012*Math.max(0,lo-0.6)+0.006*share:-0.012*share+(r.odds.w[n]<4?0.006:0);
+    bias[n]=W.machine.mode==='release'?0.008*Math.max(0,lo-0.6)+0.014*share:0.004*share+(r.odds.w[n]<4?0.003:0);
   }
   // 高配当が出やすいよう、ときどき人気薄に追い風
   {const ls=[1,2,3,4,5,6].filter(n=>r.odds.w[n]>=8);if(ls.length&&rnd()<0.2){const n=pick(ls);bias[n]+=0.028+rnd()*0.022}}
   // 100倍以上の決着が起きやすいよう、ときどき人気薄2頭そろって追い風
   {const ls=[1,2,3,4,5,6].sort((a,b)=>r.odds.w[b]-r.odds.w[a]).slice(0,4);if(rnd()<0.16){const a=pick(ls);let b=pick(ls);if(b===a)b=ls[(ls.indexOf(a)+1)%ls.length];bias[a]+=0.045+rnd()*0.02;bias[b]+=0.035+rnd()*0.02}}
+  // 人気薄が後方から追い込んで人気馬を抜く展開（約18%）
+  {const ls=[1,2,3,4,5,6].filter(n=>r.odds.w[n]>=8);if(ls.length&&rnd()<0.18){const n=pick(ls);bias.surge={[n]:0.09+rnd()*0.06};bias[n]-=0.012}}
   return bias;
 }
 function showCloseFx(){
@@ -1872,7 +1877,7 @@ function hostClosing(){
 }
 function hostCloseBets(){
   eng.bets=allBets();eng.ctl={allowBig:rnd()<0.0002,allow300:rnd()<0.12,cd:0,dm:0};eng.dmT=0;
-  eng.rs=makeRunners(eng.r,{bias:machineBias(eng.bets)});
+  {const bs=machineBias(eng.bets);eng.rs=makeRunners(eng.r,{bias:bs,surge:bs.surge})}
   eng.moti=null;if(rnd()<0.45){const ns=shuffle([1,2,3,4,5,6]).slice(0,rnd()<0.3?2:1);eng.moti={nos:ns,on:false}}
   eng.awk=null;eng.cut=0;eng.sb=null;eng.sbq=Array.from({length:5},()=>0.08+rnd()*0.84).sort((a,b)=>a-b);
   const anyBet=eng.bets.some(b=>Object.values(b||{}).some(v=>+v>0));
@@ -1907,6 +1912,7 @@ function orderOf(rs){return [...rs].sort((a,b)=>{if(a.fin&&b.fin)return a.ft-b.f
 function hostCommentary(){
   const r=eng.r,o=orderOf(eng.rs),lead=o[0],ms=eng.ms,rem=r.dist-lead.d;
   if(!ms.s&&eng.t>0.3){ms.s=1;hsay('スタートしました！')}
+  if(!ms.sg){const sx=eng.rs.find(x=>x.surge>0);if(sx&&sx.d/r.dist>0.72&&!sx.fin){ms.sg=1;hsay(`後方から${hn(sx)}がぐんぐん伸びてくる！`)}}
   if(!ms.a&&lead.d>r.dist*0.22){ms.a=1;hsay(`先頭は${hn(lead)}！ 2番手に${o[1].no}番`)}
   if(!ms.b&&lead.d>r.dist*0.45){ms.b=1;eng.half=o.map(x=>x.no);hsay(`中間地点。${o[0].no}番、${o[1].no}番、${o[2].no}番の順`)}
   if(!ms.z&&rem<900){ms.z=1;hsay('まもなく最終コーナー！')}
@@ -1943,7 +1949,6 @@ function hostLoop(ts){
       if(eng.frz>0)eng.frz-=dt;
       eng.acc+=(eng.frz>0?0:1)*dt*(r.dist/16.3)/(18.75*durK(r.dist))*(eng.fast?5:1)*(eng.slow||1)*(eng.cut>0?0.15:1);
       while(eng.acc>=0.1){stepRunners(eng.rs,r,0.1,eng.t,hostEvent);eng.t+=0.1;eng.acc-=0.1}
-      hostControl(dt);
       eng.rs.forEach(x=>{if(x.bump>0)x.bump-=dt});
       // 友達のにんじん
       others().forEach(p=>{const c=p.presence.car;if(c&&c.rn===race.rn&&+c.n>(eng.used.get(p.peer)||0)&&+c.n<=3&&c.no>=1&&c.no<=6){eng.used.set(p.peer,+c.n);hostApplyCarrot(+c.no,String(p.presence.nick),+c.q)}});
@@ -2159,7 +2164,7 @@ function renderBet(){
     <div class="dk-info" id="betbar"></div>
     <div class="dk-row">
       <div class="dk-chips">${[1,5,10].map(c=>`<button class="dchip ${chip===c?'on':''}" data-c="${c}" onclick="setChip(${c})"><span>${c}</span></button>`).join('')}</div>
-      <button class="dk-btn undo" onpointerdown="cancelDown()" onpointerup="cancelUp()" onpointerleave="cancelLeave()">取消<small>長押しで全部</small><span class="dk-fill" id="dkfill"></span></button>
+      <div class="dk-cx"><button class="dk-btn undo" onclick="undoBet()">1つ戻す</button><button class="dk-btn undo all" onclick="clearAllAsk()">全部取消</button></div>
     </div>
     <div class="dk-tip2"><button id="omakase" class="go" onclick="omakase()">おまかせBET</button><button onclick="showZukan()">ずかん</button><button onclick="showRanking()">ランキング</button><span>マスをタップでBET・長押しで連続BET</span></div>
   </div></div>`;
@@ -2175,6 +2180,14 @@ function cancelDown(){cancelDone=false;const f=document.getElementById('dkfill')
   cancelT=setTimeout(()=>{cancelDone=true;clearBets();toast('全部取り消しました');if(f){f.style.transition='none';f.style.width='0'}},600)}
 function cancelUp(){clearTimeout(cancelT);const f=document.getElementById('dkfill');if(f){f.style.transition='none';f.style.width='0'}if(!cancelDone)undoBet();cancelDone=true}
 function cancelLeave(){clearTimeout(cancelT);const f=document.getElementById('dkfill');if(f){f.style.transition='none';f.style.width='0'}cancelDone=true}
+function clearAllAsk(){if(!canBet())return;if(!Object.keys(myBets).length){SFX.nope();toast('まだBETしていません');return}
+  const tot=Object.values(myBets).reduce((a,b)=>a+(+b||0),0);
+  const m=document.createElement('div');m.className='modal';m.onclick=e=>{if(e.target===m)m.remove()};
+  m.innerHTML=`<div class="sheet" style="text-align:center"><h2>全部取り消しますか？</h2><p>賭けた <b>${tot}</b> 枚がすべて手持ちに戻ります。</p><button class="big" id="cxy">全部取り消す</button><button class="link" id="cxn">やめる</button></div>`;
+  document.body.appendChild(m);m.querySelector('#cxy').onclick=()=>{m.remove();clearBets();toast('全部取り消しました')};m.querySelector('#cxn').onclick=()=>m.remove()}
+function unbet(k){if(!canBet())return;const cur=myBets[k]||0;if(!cur)return;const back=Math.min(cur,chip);myBets[k]=cur-back;me.medals+=back;if(!myBets[k])delete myBets[k];
+  for(let i=betHist.length-1,left=back;i>=0&&left>0;i--){const h=betHist[i];(h.g||[h]).forEach(x=>{if(x.k===k&&left>0){const t=Math.min(x.add,left);x.add-=t;left-=t}})}
+  updateCell(k);saveMe();myPresence();renderPlayers();updateBetbar(true);tone(520,0,0.08,'triangle',0.08)}
 function undoBet(){
   if(!canBet())return;
   const h=betHist.pop();if(!h){SFX.nope();return}
@@ -2242,7 +2255,7 @@ function strip(a,b,sep){
 }
 function cell(k,head,extra=''){
   const mine=myBets[k]||0;const o=oddsOf(k);const bm=race.bonusShown?(race.bonus[k]||0):0;
-  return `<button class="cell ${mine?'on':''} ${bm?'bonus':''}" data-k="${k}" onpointerdown="pd(event,'${k}')">${bm?`<span class="bxb">×${bm}</span>`:''}${head}${extra}<div class="co ${oc(o)}">${fo(o)}</div><div class="ms">${mine?`${coinStack(mine)}<b>${mine}</b>`:''}</div><div class="cc"><i class="ic-ppl"></i>${crowdNow(k)+othersOn(k)}</div></button>`;
+  return `<button class="cell ${mine?'on':''} ${bm?'bonus':''}" data-k="${k}" onpointerdown="pd(event,'${k}')">${mine?`<span class="cmx" onpointerdown="event.stopPropagation();unbet('${k}')">−</span>`:''}${bm?`<span class="bxb">×${bm}</span>`:''}${head}${extra}<div class="co ${oc(o)}">${fo(o)}</div><div class="ms">${mine?`${coinStack(mine)}<b>${mine}</b>`:''}</div><div class="cc"><i class="ic-ppl"></i>${crowdNow(k)+othersOn(k)}</div></button>`;
 }
 
 function coinStack(a){const n=Math.min(4,1+Math.floor(a/10));let h='';for(let i=0;i<n;i++)h+=`<i class="coin" style="bottom:${i*3}px"></i>`;return `<span class="cstack">${h}</span>`}
@@ -2328,7 +2341,7 @@ document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.c
 function toggleSound(){me.mute=!me.mute;if(!me.mute&&phase==='bet')bgmStart();saveMe();document.querySelectorAll('.sndb').forEach(b=>b.innerHTML=me.mute?'<i class="ic-snd off"></i>':'<i class="ic-snd"></i>');if(!me.mute)SFX.coin(0)}
 function cellEl(k){return document.querySelector(`.cell[data-k="${k}"]`)}
 function updateCell(k){
-  document.querySelectorAll(`.cell[data-k="${k}"]`).forEach(el=>{const m=myBets[k]||0;el.classList.toggle('on',!!m);const ms=el.querySelector('.ms');if(ms)ms.innerHTML=m?`${coinStack(m)}<b>${m}</b>`:''});
+  document.querySelectorAll(`.cell[data-k="${k}"]`).forEach(el=>{const m=myBets[k]||0;el.classList.toggle('on',!!m);const ms=el.querySelector('.ms');if(ms)ms.innerHTML=m?`${coinStack(m)}<b>${m}</b>`:'';let x=el.querySelector('.cmx');if(m&&!x){x=document.createElement('span');x.className='cmx';x.textContent='−';x.setAttribute('onpointerdown',`event.stopPropagation();unbet('${k}')`);el.prepend(x)}else if(!m&&x)x.remove()});
 }
 let crowdPrev={},feedAt=0;
 const FAKE=['ハマの馬券師','競馬好きOL','穴党のおじさん','三連単職人','ビギナー君','ラッキー主婦','赤ペン先生','単勝一筋','万馬券ハンター','ゆるふわ予想'];
@@ -2653,7 +2666,7 @@ function derbyTut(){
     {sel:'.modes',h:'賭け方を切り替える',t:'<b>単勝・馬連</b>：1着の馬／1-2着の組み合わせ<br><b>馬単</b>：1着→2着を順番どおり（高配当）'},
     {sel:'#board>*:first-child',h:'オッズ表（ここに賭ける）',t:'マスの数字が<b>倍率</b>。マスを<b>タップで1回BET</b>、<b>長押しで連続BET</b>。当たれば 賭けた枚数×倍率 のメダルがもらえます。'},
     {sel:'.dk-chips',h:'1回に賭ける枚数',t:'タップ1回で賭ける枚数を <b>1・5・10枚</b> から選べます。'},
-    {sel:'.dk-btn.undo',h:'取消',t:'タップで1つ前に戻す、<b>長押しで全部取消</b>。'},
+    {sel:'.dk-cx',h:'取り消し',t:'<b>1つ戻す</b>で直前のBETを取り消し、<b>全部取消</b>ですべて戻せます。賭けたマスの左上の<b>赤い−</b>を押すと、そのマスだけ減らせます。'},
     {sel:'#omakase',h:'迷ったら おまかせ',t:'人気の馬と組み合わせに<b>自動でBET</b>します。'},
     {sel:'#betbar',h:'手持ちと払い戻し',t:'今の手持ち、BET合計、<b>当たった時の最大</b>がここに出ます。準備ができたら始めよう！'}
   ].filter(st=>!st.sel||document.querySelector(st.sel)),()=>{if(role==='solo')paused=wasP},()=>phase==='bet'&&document.getElementById('board'));
